@@ -15,8 +15,13 @@ WORKDIR /app
 
 COPY --from=builder /app/server /app/server
 
-# Create a non-root user
-RUN addgroup --system deno && adduser --system --ingroup deno deno
+# Create a non-root user if it doesn't exist
+RUN if ! getent group deno > /dev/null 2>&1; then \
+        addgroup --system deno; \
+    fi && \
+    if ! getent passwd deno > /dev/null 2>&1; then \
+        adduser --system --ingroup deno deno; \
+    fi
 
 # Set environment variables
 ENV DENO_DIR=/deno-dir
