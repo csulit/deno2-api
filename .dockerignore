@@ -1,0 +1,44 @@
+# Ignore version control files
+.git
+.gitignore
+
+# Ignore Deno cache and lock files
+.deno_dir
+deno.lock
+
+# Ignore environment files
+.env
+*.env
+
+# Ignore development and test files
+*_test.ts
+*.test.ts
+*.spec.ts
+
+# Ignore documentation and README files
+*.md
+
+# Ignore Docker-related files
+Dockerfile
+.dockerignore
+
+# Ignore editor-specific files
+.vscode
+.idea
+
+# Ignore logs
+*.log
+
+# Ignore any temporary files
+*.tmp
+*.temp
+
+# Ignore node_modules (if any)
+node_modules
+
+# Ignore any build artifacts or compiled files
+dist
+build
+
+# Ignore any backup files
+*.bak

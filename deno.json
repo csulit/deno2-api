@@ -1,0 +1,16 @@
+{
+  "entryPoint": "server.ts",
+  "nodeModulesDir": "auto",
+  "imports": {
+    "@clerk/backend": "npm:@clerk/backend@^1.13.9",
+    "@hono/clerk-auth": "npm:@hono/clerk-auth@^2.0.0",
+    "@hono/hono": "jsr:@hono/hono@^4.6.4",
+    "@std/dotenv": "jsr:@std/dotenv@^0.225.2",
+    "@wok/pg-driver": "jsr:@wok/pg-driver@^0.19.4",
+    "zod": "npm:zod@^3.23.8"
+  },
+  "tasks": {
+    "start": "deno run --allow-net --allow-read --allow-env --unstable-kv --watch server.ts",
+    "build": "deno compile --allow-net --allow-read --allow-env --unstable-kv server.ts"
+  }
+}
