@@ -42,3 +42,6 @@ build
 
 # Ignore any backup files
 *.bak
+
+# Ignore binary
+server
