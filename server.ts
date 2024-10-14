@@ -15,4 +15,4 @@ app.get("/", async (c: Context) => {
 
 listenQueue(kv).catch((error) => console.error(error));
 
-Deno.serve({ port: 8000 }, app.fetch);
+Deno.serve({ port: parseInt(Deno.env.get("PORT") || "8000") }, app.fetch);
