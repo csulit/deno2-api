@@ -1,13 +1,13 @@
--- Enable PostGIS extension
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_topology;
 
--- Create ENUM types
-CREATE TYPE offer_type AS ENUM ('Sale', 'Rent');
-
--- Create tables for lookup data
 CREATE TABLE Property_Type (
     property_type_id SERIAL PRIMARY KEY,
+    type_name VARCHAR(255) NOT NULL UNIQUE
+);
+
+CREATE TABLE Warehouse_Type (
+    warehouse_type_id SERIAL PRIMARY KEY,
     type_name VARCHAR(255) NOT NULL UNIQUE
 );
 
@@ -40,7 +40,6 @@ CREATE TABLE Listing_Area (
     area VARCHAR(255) NOT NULL
 );
 
--- Create main tables
 CREATE TABLE "User" (
     user_id SERIAL PRIMARY KEY,
     clerk_id VARCHAR(255) NOT NULL UNIQUE,
@@ -55,6 +54,7 @@ CREATE TABLE "User" (
 
 CREATE TABLE Property (
     id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES "User"(user_id),
     floor_size DOUBLE PRECISION NOT NULL DEFAULT 0,
     lot_size DOUBLE PRECISION NOT NULL DEFAULT 0,
     building_size DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -66,6 +66,7 @@ CREATE TABLE Property (
     latitude FLOAT NOT NULL,
     year_built INT,
     primary_image_url VARCHAR(255),
+    images JSONB,
     amenities JSONB,
     property_features JSONB,
     indoor_features JSONB,
@@ -73,17 +74,15 @@ CREATE TABLE Property (
     ai_generated_description TEXT,
     ai_generated_basic_features JSONB,
     property_type_id INT NOT NULL REFERENCES Property_Type(property_type_id),
-    warehouse_type VARCHAR(255),
+    warehouse_type_id INT REFERENCES Warehouse_Type(warehouse_type_id),
     json_data JSONB,
     address VARCHAR(255),
     listing_region_id INT NOT NULL REFERENCES Listing_Region(id) ON DELETE CASCADE,
     listing_city_id INT NOT NULL REFERENCES Listing_City(id) ON DELETE CASCADE,
-    listing_area_id INT NOT NULL REFERENCES Listing_Area(id) ON DELETE CASCADE,
+    listing_area_id INT REFERENCES Listing_Area(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     geog GEOGRAPHY(Point, 4326),
-    CONSTRAINT unique_location UNIQUE (latitude, longitude),
-    CONSTRAINT check_longitude CHECK (longitude BETWEEN -180 AND 180),
     CONSTRAINT check_floor_size CHECK (floor_size >= 0),
     CONSTRAINT check_lot_size CHECK (lot_size >= 0),
     CONSTRAINT check_building_size CHECK (building_size >= 0),
@@ -99,15 +98,21 @@ CREATE TABLE Listing (
     is_scraped BOOLEAN NOT NULL DEFAULT FALSE,
     address VARCHAR(255),
     price DOUBLE PRECISION NOT NULL CHECK (price >= 0),
-    offer_type offer_type NOT NULL,
-    listing_city_id INT REFERENCES Listing_City(id) ON DELETE CASCADE,
-    listing_region_id INT REFERENCES Listing_Region(id) ON DELETE CASCADE,
-    listing_area_id INT REFERENCES Listing_Area(id) ON DELETE CASCADE,
+    offer_type_id INT NOT NULL REFERENCES Listing_Type(listing_type_id),
+    property_id INT NOT NULL REFERENCES Property(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes
+CREATE TABLE Price_Change_Log (
+   id SERIAL PRIMARY KEY,
+   listing_id INTEGER NOT NULL,
+   old_price DOUBLE PRECISION,
+   new_price DOUBLE PRECISION NOT NULL,
+   change_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   FOREIGN KEY (listing_id) REFERENCES Listing(id)
+);
+
 CREATE INDEX idx_property_type_id ON Property(property_type_id);
 CREATE INDEX idx_listing_region_id ON Property(listing_region_id);
 CREATE INDEX idx_listing_city_id ON Property(listing_city_id);
@@ -115,8 +120,13 @@ CREATE INDEX idx_listing_area_id ON Property(listing_area_id);
 CREATE INDEX idx_listing_price ON Listing(price);
 CREATE INDEX idx_listing_created_at ON Listing(created_at);
 CREATE INDEX idx_property_geog ON Property USING GIST(geog);
+CREATE INDEX idx_property_amenities ON Property USING GIN (amenities);
+CREATE INDEX idx_property_location ON Property(longitude, latitude);
+CREATE INDEX idx_property_property_features ON Property USING GIN (property_features);
+CREATE INDEX idx_property_indoor_features ON Property USING GIN (indoor_features);
+CREATE INDEX idx_property_outdoor_features ON Property USING GIN (outdoor_features);
+CREATE INDEX idx_property_ai_generated_basic_features ON Property USING GIN (ai_generated_basic_features);
 
--- Create functions
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -124,6 +134,14 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_property_timestamp
+BEFORE UPDATE ON Property
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_listing_timestamp
+BEFORE UPDATE ON Listing
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE OR REPLACE FUNCTION update_geog()
 RETURNS TRIGGER AS $$
@@ -133,25 +151,59 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers
-CREATE TRIGGER update_property_timestamp
-BEFORE UPDATE ON Property
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_listing_timestamp
-BEFORE UPDATE ON Listing
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_geog_trigger
 BEFORE INSERT OR UPDATE ON Property
 FOR EACH ROW EXECUTE FUNCTION update_geog();
 
--- Update existing data (if needed)
+CREATE OR REPLACE FUNCTION log_price_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.price IS DISTINCT FROM NEW.price THEN
+        INSERT INTO Price_change_log (listing_id, old_price, new_price, change_timestamp)
+        VALUES (OLD.id, OLD.price, NEW.price, CURRENT_TIMESTAMP);
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_price_change
+AFTER UPDATE ON Listing
+FOR EACH ROW
+WHEN (OLD.price IS DISTINCT FROM NEW.price)
+EXECUTE FUNCTION log_price_change();
+
+CREATE OR REPLACE FUNCTION check_images_format()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.images IS NOT NULL THEN
+        -- Raise an exception if the images are not an array
+        IF jsonb_typeof(NEW.images) <> 'array' THEN
+            RAISE EXCEPTION 'images must be a JSON array';
+        END IF;
+
+        -- Raise an exception if any element is not a valid URL
+        PERFORM 1
+        FROM jsonb_array_elements_text(NEW.images) AS elem
+        WHERE elem::text = '' OR elem !~ '^https?://';
+
+        IF FOUND THEN
+            RAISE EXCEPTION 'All elements of images must be non-empty strings and valid URLs';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_images_trigger
+BEFORE INSERT OR UPDATE ON property
+FOR EACH ROW
+EXECUTE FUNCTION check_images_format();
+
 UPDATE Property
 SET geog = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
 WHERE id > 0;
 
--- Sample query (EXPLAIN ANALYZE)
 EXPLAIN ANALYZE
 WITH params AS (
     SELECT

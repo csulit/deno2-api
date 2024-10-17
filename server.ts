@@ -13,6 +13,12 @@ app.get("/", async (c: Context) => {
   return c.text("Hono!");
 });
 
+app.post("/", async (c: Context) => {
+  const data = await c.req.json();
+  await sendMessage({ kv, data, options: { delay: 5000 } });
+  return c.text("Hono!");
+});
+
 listenQueue(kv).catch((error) => console.error(error));
 
 Deno.serve({ port: parseInt(Deno.env.get("PORT") || "8000") }, app.fetch);

@@ -4,7 +4,7 @@
   "imports": {
     "@clerk/backend": "npm:@clerk/backend@^1.13.9",
     "@hono/clerk-auth": "npm:@hono/clerk-auth@^2.0.0",
-    "@hono/hono": "jsr:@hono/hono@^4.6.4",
+    "@hono/hono": "jsr:@hono/hono@^4.6.5",
     "@std/dotenv": "jsr:@std/dotenv@^0.225.2",
     "@wok/pg-driver": "jsr:@wok/pg-driver@^0.19.4",
     "zod": "npm:zod@^3.23.8"
