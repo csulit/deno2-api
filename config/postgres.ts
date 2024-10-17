@@ -1,15 +1,8 @@
-import { Pool } from "jsr:@wok/pg-driver";
+import { Pool } from "postgres";
 
 const POOL_CONNECTIONS = 20;
-const config = {
-  database: Deno.env.get("DB_NAME"),
-  hostname: Deno.env.get("DB_HOST"),
-  password: Deno.env.get("DB_PASSWORD"),
-  port: parseInt(Deno.env.get("DB_PORT") || "", 10),
-  user: Deno.env.get("DB_USER"),
-};
 
-export const dbPool = new Pool(config, POOL_CONNECTIONS);
+export const dbPool = new Pool(Deno.env.get("DATABASE_URL"), POOL_CONNECTIONS);
 
 export async function runQuery(query: string) {
   using client = await dbPool.connect();

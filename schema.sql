@@ -97,13 +97,13 @@ CREATE TABLE Listing (
     description TEXT NOT NULL,
     is_scraped BOOLEAN NOT NULL DEFAULT FALSE,
     address VARCHAR(255),
+    price_formatted VARCHAR(255),
     price DOUBLE PRECISION NOT NULL CHECK (price >= 0),
     offer_type_id INT NOT NULL REFERENCES Listing_Type(listing_type_id),
     property_id INT NOT NULL REFERENCES Property(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE Price_Change_Log (
    id SERIAL PRIMARY KEY,
    listing_id INTEGER NOT NULL,
