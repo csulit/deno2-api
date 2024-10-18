@@ -100,7 +100,7 @@ function cleanSpecialCharacters(input: string): string {
   // Remove emojis and other special characters
   const cleanedString = encodedString.replace(
     /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu,
-    "",
+    ""
   );
 
   // Remove extra whitespace
@@ -133,20 +133,8 @@ export async function listenQueue(kv: Deno.Kv) {
                 Object.keys(msg.data.dataLayer.attributes).length < 5
               ) {
                 throw new Error(
-                  "Attributes are missing, undefined, or have fewer than 5 properties",
+                  "Attributes are missing, undefined, or have fewer than 5 properties"
                 );
-              }
-
-              if (!msg.data.dataLayer.agent_name) {
-                throw new Error("Agent name is missing or undefined");
-              }
-
-              if (!msg.data.dataLayer.product_owner) {
-                throw new Error("Product owner is missing or undefined");
-              }
-
-              if (!msg.data.dataLayer.product_owner_name) {
-                throw new Error("Product owner name is missing or undefined");
               }
 
               if (
@@ -154,7 +142,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 typeof msg.data.dataLayer.location !== "object"
               ) {
                 throw new Error(
-                  "Location is missing, undefined, or not an object",
+                  "Location is missing, undefined, or not an object"
                 );
               }
 
@@ -164,7 +152,7 @@ export async function listenQueue(kv: Deno.Kv) {
               const images = msg.data.images as { src: string }[];
               const isCondominium =
                 msg.data.dataLayer.attributes.attribute_set_name ===
-                  "Condominium";
+                "Condominium";
               const isHouse =
                 msg.data.dataLayer.attributes.attribute_set_name === "House";
               const isWarehouse =
@@ -185,8 +173,8 @@ export async function listenQueue(kv: Deno.Kv) {
                 };
 
                 const price = msg.data.dataLayer?.attributes?.price;
-                const priceFormatted = msg.data.dataLayer?.attributes
-                  ?.price_formatted;
+                const priceFormatted =
+                  msg.data.dataLayer?.attributes?.price_formatted;
 
                 await transaction.queryArray({
                   args: [price, priceFormatted, listing.id],
@@ -216,8 +204,8 @@ export async function listenQueue(kv: Deno.Kv) {
                   JSON.stringify(
                     images.map((image) => image.src),
                     null,
-                    2,
-                  ),
+                    2
+                  )
                 );
 
                 await transaction.commit();
@@ -273,9 +261,8 @@ export async function listenQueue(kv: Deno.Kv) {
               const productOwnerName = msg.data.dataLayer.product_owner_name;
               const location: Location = msg.data.dataLayer.location;
               const dataLayerAttributes = msg.data.dataLayer.attributes;
-              const offerTypeId = dataLayerAttributes.offer_type === "Rent"
-                ? 2
-                : 1;
+              const offerTypeId =
+                dataLayerAttributes.offer_type === "Rent" ? 2 : 1;
               const sellerIsTrusted = dataLayerAttributes?.seller_is_trusted;
               const locationData = await getLocation(transaction, {
                 ...location,
@@ -386,8 +373,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   offerTypeId,
                   newProperty,
                 ],
-                text:
-                  `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
+                text: `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
               });
 
