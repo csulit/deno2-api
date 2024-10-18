@@ -56,12 +56,10 @@ app.get("/api/properties", async (c: Context) => {
   const sqlParams = [
     parseInt(query.property_type_id),
     parseInt(query.listing_type_id),
-    parseInt(query.page_size),
-    offset,
   ];
 
   // Initialize the parameter counter for dynamic parameter numbering
-  let paramCounter = 5;
+  let paramCounter = 3;
 
   // Function to add a new condition to the WHERE clause
   // deno-lint-ignore no-explicit-any
@@ -103,7 +101,7 @@ app.get("/api/properties", async (c: Context) => {
   console.log({ sqlWhereClause, sqlParams, nextParamCounter: paramCounter });
 
   const postgres = await client.queryObject({
-    args: sqlParams,
+    args: [...sqlParams, parseInt(query.page_size), offset],
     text: `
           SELECT
               l.id AS listing_id,
@@ -169,10 +167,46 @@ app.get("/api/properties", async (c: Context) => {
               LEFT JOIN Listing_Area ar ON p.listing_area_id = ar.id
           WHERE
               ${sqlWhereClause}
-          ORDER BY l.id DESC LIMIT $3 OFFSET $4;
+          ORDER BY l.id DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1};
     `,
   });
-  return c.json(postgres.rows);
+
+  const recordCount = await client.queryObject({
+    args: sqlParams,
+    text: `
+      SELECT COUNT(*)::integer
+      FROM
+        Listing l
+        JOIN Property p ON l.property_id = p.id
+        LEFT JOIN Property_Type pt ON p.property_type_id = pt.property_type_id
+        LEFT JOIN Listing_Type lt ON l.offer_type_id = lt.listing_type_id
+        LEFT JOIN Warehouse_Type wt ON p.warehouse_type_id = wt.warehouse_type_id
+        LEFT JOIN Listing_Region rg ON p.listing_region_id = rg.id
+        LEFT JOIN Listing_City ct ON p.listing_city_id = ct.id
+        LEFT JOIN Listing_Area ar ON p.listing_area_id = ar.id
+      WHERE
+        ${sqlWhereClause}
+    `,
+  });
+
+  const counterResult = recordCount.rows[0] as { count: number };
+  const totalListingRecords = counterResult.count;
+  const pageNo = parseInt(query.page);
+  const pageSize = parseInt(query.page_size);
+  
+  const totalPages = Math.ceil(totalListingRecords / pageSize);
+  const nextPage = pageNo < totalPages ? pageNo + 1 : null;
+  const previousPage = pageNo > 1 ? pageNo - 1 : null;
+  
+  return c.json({ 
+    data: postgres.rows,
+    total: totalListingRecords,
+    page: pageNo,
+    page_size: pageSize,
+    total_pages: totalPages,
+    next_page: nextPage,
+    previous_page: previousPage
+  });
 });
 
 app.post("/", async (c: Context) => {
