@@ -20,8 +20,11 @@ app.get("/api/properties", async (c: Context) => {
     max_distance_km?: string;
   };
 
-  if (!query.page || !query.page_size) {
+  if (!query.page) {
     query.page = "1";
+  }
+
+  if (!query.page_size) {
     query.page_size = "10";
   }
 
