@@ -120,10 +120,17 @@ export async function listenQueue(kv: Deno.Kv) {
             const client_1 = await dbPool.connect();
 
             try {
+              let propertyId;
               const listingUrl = msg.data.listingUrl;
               const isCondominium =
                 msg.data?.dataLayer?.attributes?.attribute_set_name ===
                 "Condominium";
+              const isHouse =
+                msg.data?.dataLayer?.attributes?.attribute_set_name === "House";
+              const isWarehouse =
+                msg.data?.dataLayer?.attributes?.subcategory === "Warehouse";
+              const isLand =
+                msg.data?.dataLayer?.attributes?.subcategory === "Land";
 
               transaction = client_1.createTransaction("create-listing");
               await transaction.begin();
@@ -146,6 +153,14 @@ export async function listenQueue(kv: Deno.Kv) {
                 throw new Error("Agent name is missing or undefined");
               }
 
+              if (!msg.data.dataLayer.product_owner) {
+                throw new Error("Product owner is missing or undefined");
+              }
+
+              if (!msg.data.dataLayer.product_owner_name) {
+                throw new Error("Product owner name is missing or undefined");
+              }
+
               if (
                 !msg.data.dataLayer.location ||
                 typeof msg.data.dataLayer.location !== "object"
@@ -164,48 +179,65 @@ export async function listenQueue(kv: Deno.Kv) {
                 );
               }
 
+              await transaction.commit();
+
               if (isCondominium) {
-                const propertyTypeId = 1;
-                const images = msg.data.images as { src: string }[];
-                const agentName = msg.data.dataLayer.agent_name;
-                const location: Location = msg.data.dataLayer.location;
-                const dataLayerAttributes = msg.data.dataLayer.attributes;
-                const offerTypeId =
-                  dataLayerAttributes.offer_type === "Rent" ? 2 : 1;
-                const locationData = await getLocation(transaction, {
-                  ...location,
-                  listing_area_id: dataLayerAttributes?.listing_area_id,
-                });
+                propertyId = 1;
+              }
 
-                const { region, city, area } = locationData;
+              if (isHouse) {
+                propertyId = 2;
+              }
 
-                const property = await transaction.queryArray({
-                  args: [
-                    dataLayerAttributes?.floor_size || 0,
-                    dataLayerAttributes?.lot_size || 0,
-                    dataLayerAttributes?.building_size || 0,
-                    dataLayerAttributes?.ceiling_height || 0,
-                    dataLayerAttributes?.bedrooms || 0,
-                    dataLayerAttributes?.bathrooms || 0,
-                    dataLayerAttributes?.car_spaces || 0,
-                    dataLayerAttributes.location_longitude,
-                    dataLayerAttributes.location_latitude,
-                    dataLayerAttributes?.year_built || 0,
-                    dataLayerAttributes?.image_url || null,
-                    JSON.stringify(images.map((image) => image.src)),
-                    JSON.stringify(dataLayerAttributes?.amenities || {}),
-                    JSON.stringify(
-                      dataLayerAttributes?.property_features || {}
-                    ),
-                    JSON.stringify(dataLayerAttributes?.indoor_features || {}),
-                    JSON.stringify(dataLayerAttributes?.outdoor_features || {}),
-                    propertyTypeId,
-                    dataLayerAttributes?.address || null,
-                    region.id,
-                    city.id,
-                    area.id,
-                  ],
-                  text: `
+              if (isWarehouse) {
+                propertyId = 3;
+              }
+
+              if (isLand) {
+                propertyId = 4;
+              }
+
+              const images = msg.data.images as { src: string }[];
+              const agentName = msg.data.dataLayer.agent_name;
+              const productOwnerId = msg.data.dataLayer.product_owner;
+              const productOwnerName = msg.data.dataLayer.product_owner_name;
+              const location: Location = msg.data.dataLayer.location;
+              const dataLayerAttributes = msg.data.dataLayer.attributes;
+              const offerTypeId =
+                dataLayerAttributes.offer_type === "Rent" ? 2 : 1;
+              const locationData = await getLocation(transaction, {
+                ...location,
+                listing_area_id: dataLayerAttributes?.listing_area_id,
+              });
+
+              const { region, city, area } = locationData;
+
+              const property = await transaction.queryArray({
+                args: [
+                  dataLayerAttributes?.floor_size || 0,
+                  dataLayerAttributes?.land_size || 0,
+                  dataLayerAttributes?.building_size || 0,
+                  dataLayerAttributes?.ceiling_height || 0,
+                  dataLayerAttributes?.bedrooms || 0,
+                  dataLayerAttributes?.bathrooms || 0,
+                  dataLayerAttributes?.car_spaces || 0,
+                  dataLayerAttributes.location_longitude,
+                  dataLayerAttributes.location_latitude,
+                  dataLayerAttributes?.year_built || 0,
+                  dataLayerAttributes?.image_url || null,
+                  JSON.stringify(images.map((image) => image.src)),
+                  JSON.stringify(dataLayerAttributes?.amenities || {}),
+                  JSON.stringify(dataLayerAttributes?.property_features || {}),
+                  JSON.stringify(dataLayerAttributes?.indoor_features || {}),
+                  JSON.stringify(dataLayerAttributes?.outdoor_features || {}),
+                  propertyId,
+                  dataLayerAttributes?.address || null,
+                  region.id,
+                  city.id,
+                  area.id,
+                  JSON.stringify(msg.data.dataLayer),
+                ],
+                text: `
                     INSERT INTO property (
                       floor_size, 
                       lot_size, 
@@ -227,7 +259,8 @@ export async function listenQueue(kv: Deno.Kv) {
                       address, 
                       listing_region_id, 
                       listing_city_id, 
-                      listing_area_id
+                      listing_area_id,
+                      json_data
                     ) VALUES (
                       $1,
                       $2,
@@ -249,43 +282,41 @@ export async function listenQueue(kv: Deno.Kv) {
                       $18,
                       $19,
                       $20,
-                      $21
+                      $21,
+                      $22
                     ) RETURNING id
                   `,
-                });
+              });
 
-                const newProperty = property.rows[0][0] as number;
+              const newProperty = property.rows[0][0] as number;
 
-                const address = `${
-                  dataLayerAttributes?.listing_area
-                    ? `${dataLayerAttributes.listing_area}, `
-                    : ""
-                }${dataLayerAttributes.listing_city}`;
+              const address = `${
+                dataLayerAttributes?.listing_area
+                  ? `${dataLayerAttributes.listing_area}, `
+                  : ""
+              }${dataLayerAttributes.listing_city}`;
 
-                await transaction.queryArray({
-                  args: [
-                    msg.data.dataLayer?.title,
-                    `https://www.lamudi.com.ph/${dataLayerAttributes?.urlkey_details}`,
-                    dataLayerAttributes?.project_name || null,
-                    cleanSpecialCharacters(
-                      msg.data.dataLayer?.description?.text
-                    ),
-                    true,
-                    address,
-                    dataLayerAttributes?.price_formatted
-                      ? `${dataLayerAttributes?.price_formatted}`
-                      : null,
-                    dataLayerAttributes?.price || 0,
-                    offerTypeId,
-                    newProperty,
-                  ],
-                  text: `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
+              await transaction.queryArray({
+                args: [
+                  msg.data.dataLayer?.title,
+                  `https://www.lamudi.com.ph/${dataLayerAttributes?.urlkey_details}`,
+                  dataLayerAttributes?.project_name || null,
+                  cleanSpecialCharacters(msg.data.dataLayer?.description?.text),
+                  true,
+                  address,
+                  dataLayerAttributes?.price_formatted
+                    ? `${dataLayerAttributes?.price_formatted}`
+                    : null,
+                  dataLayerAttributes?.price || 0,
+                  offerTypeId,
+                  newProperty,
+                ],
+                text: `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-                });
+              });
 
-                await transaction.commit();
-                console.log("Transaction successfully committed");
-              }
+              await transaction.commit();
+              console.log("Transaction successfully committed");
             } catch (error) {
               if (transaction) {
                 console.log("Transaction rollback");
