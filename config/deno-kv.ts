@@ -122,6 +122,7 @@ export async function listenQueue(kv: Deno.Kv) {
             try {
               let propertyId;
               const listingUrl = msg.data.listingUrl;
+              const images = msg.data.images as { src: string }[];
               const isCondominium =
                 msg.data?.dataLayer?.attributes?.attribute_set_name ===
                 "Condominium";
@@ -135,14 +136,49 @@ export async function listenQueue(kv: Deno.Kv) {
               transaction = client_1.createTransaction("create-listing");
               await transaction.begin();
 
-              const listingId = await transaction.queryObject(`
-                SELECT id
+              const listingRecord = await transaction.queryObject(`
+                SELECT id, property_id
                 FROM Listing
                 WHERE url = '${listingUrl}' OR title = '${msg.data.dataLayer?.title}'
               `);
 
-              if (listingId?.rowCount && listingId.rowCount > 0) {
-                throw new Error("Listing already exists");
+              if (listingRecord?.rowCount && listingRecord.rowCount > 0) {
+                const listing = listingRecord.rows[0] as {
+                  id: number;
+                  property_id: number;
+                };
+
+                const price = msg.data.dataLayer?.attributes?.price;
+                const priceFormatted =
+                  msg.data.dataLayer?.attributes?.price_formatted;
+
+                await transaction.queryArray({
+                  args: [price, priceFormatted, listing.id],
+                  text: `
+                    UPDATE Listing
+                    SET price = $1, price_formatted = $2
+                    WHERE id = $3
+                  `,
+                });
+
+                await transaction.queryArray({
+                  args: [
+                    JSON.stringify(msg.data.dataLayer),
+                    JSON.stringify(images.map((image) => image.src)),
+                    listing.property_id,
+                  ],
+                  text: `
+                    UPDATE Property
+                    SET json_data = $1, images = $2
+                    WHERE id = $3
+                  `,
+                });
+
+                console.log("Listing updated");
+
+                await transaction.commit();
+
+                return;
               }
 
               if (!msg.data?.dataLayer) {
@@ -197,7 +233,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 propertyId = 4;
               }
 
-              const images = msg.data.images as { src: string }[];
+              const agentId = msg.data.dataLayer.agent_id;
               const agentName = msg.data.dataLayer.agent_name;
               const productOwnerId = msg.data.dataLayer.product_owner;
               const productOwnerName = msg.data.dataLayer.product_owner_name;
@@ -205,6 +241,7 @@ export async function listenQueue(kv: Deno.Kv) {
               const dataLayerAttributes = msg.data.dataLayer.attributes;
               const offerTypeId =
                 dataLayerAttributes.offer_type === "Rent" ? 2 : 1;
+              const sellerIsTrusted = dataLayerAttributes?.seller_is_trusted;
               const locationData = await getLocation(transaction, {
                 ...location,
                 listing_area_id: dataLayerAttributes?.listing_area_id,
