@@ -217,7 +217,7 @@ app.get("/api/properties", async (c: Context) => {
 app.get("/api/properties/:id", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
-  
+
   if (!id) {
     return c.json({ error: "Property ID is required" }, 400);
   }
@@ -292,7 +292,7 @@ app.get("/api/properties/:id", async (c: Context) => {
     `,
   });
 
-  return c.json({ data: property });
+  return c.json({ data: property.rows[0] });
 });
 
 app.post("/", async (c: Context) => {
