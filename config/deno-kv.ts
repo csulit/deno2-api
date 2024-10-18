@@ -189,6 +189,14 @@ export async function listenQueue(kv: Deno.Kv) {
                 });
 
                 console.log("Listing updated");
+                console.log(
+                  "Images updated ",
+                  JSON.stringify(
+                    images.map((image) => image.src),
+                    null,
+                    2
+                  )
+                );
 
                 await transaction.commit();
 
