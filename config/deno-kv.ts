@@ -120,18 +120,32 @@ export async function listenQueue(kv: Deno.Kv) {
             const client_1 = await dbPool.connect();
 
             try {
+              if (!msg.data?.dataLayer) {
+                throw new Error("DataLayer is missing or undefined");
+              }
+
+              if (
+                !msg.data.dataLayer.attributes ||
+                Object.keys(msg.data.dataLayer.attributes).length < 5
+              ) {
+                throw new Error(
+                  "Attributes are missing, undefined, or have fewer than 5 properties"
+                );
+              }
+
               let propertyId;
+              let warehouseTypeId;
               const listingUrl = msg.data.listingUrl;
               const images = msg.data.images as { src: string }[];
               const isCondominium =
-                msg.data?.dataLayer?.attributes?.attribute_set_name ===
+                msg.data.dataLayer.attributes.attribute_set_name ===
                 "Condominium";
               const isHouse =
-                msg.data?.dataLayer?.attributes?.attribute_set_name === "House";
+                msg.data.dataLayer.attributes.attribute_set_name === "House";
               const isWarehouse =
-                msg.data?.dataLayer?.attributes?.subcategory === "Warehouse";
+                msg.data.dataLayer.attributes.subcategory === "Warehouse";
               const isLand =
-                msg.data?.dataLayer?.attributes?.subcategory === "Land";
+                msg.data.dataLayer.attributes.subcategory === "Land";
 
               transaction = client_1.createTransaction("create-listing");
               await transaction.begin();
@@ -181,10 +195,6 @@ export async function listenQueue(kv: Deno.Kv) {
                 return;
               }
 
-              if (!msg.data?.dataLayer) {
-                throw new Error("DataLayer is missing or undefined");
-              }
-
               if (!msg.data.dataLayer.agent_name) {
                 throw new Error("Agent name is missing or undefined");
               }
@@ -206,17 +216,6 @@ export async function listenQueue(kv: Deno.Kv) {
                 );
               }
 
-              if (
-                !msg.data.dataLayer.attributes ||
-                Object.keys(msg.data.dataLayer.attributes).length < 5
-              ) {
-                throw new Error(
-                  "Attributes are missing, undefined, or have fewer than 5 properties"
-                );
-              }
-
-              await transaction.commit();
-
               if (isCondominium) {
                 propertyId = 1;
               }
@@ -226,6 +225,32 @@ export async function listenQueue(kv: Deno.Kv) {
               }
 
               if (isWarehouse) {
+                const warehouseType =
+                  msg.data.dataLayer.attributes.attribute_set_name;
+
+                const warehouseTypeRecord = await transaction.queryArray({
+                  args: [warehouseType],
+                  text: `
+                    SELECT warehouse_type_id
+                    FROM Warehouse_Type
+                    WHERE type_name = $1
+                  `,
+                });
+
+                if (warehouseTypeRecord.rowCount === 1) {
+                  warehouseTypeId = warehouseTypeRecord.rows[0][0] as number;
+                } else {
+                  const newWarehouseType = await transaction.queryArray({
+                    args: [warehouseType],
+                    text: `
+                      INSERT INTO Warehouse_Type (type_name)
+                      VALUES ($1) RETURNING warehouse_type_id
+                    `,
+                  });
+
+                  warehouseTypeId = newWarehouseType.rows[0][0] as number;
+                }
+
                 propertyId = 3;
               }
 
@@ -273,6 +298,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   city.id,
                   area.id,
                   JSON.stringify(msg.data.dataLayer),
+                  warehouseTypeId || null,
                 ],
                 text: `
                     INSERT INTO property (
@@ -297,7 +323,8 @@ export async function listenQueue(kv: Deno.Kv) {
                       listing_region_id, 
                       listing_city_id, 
                       listing_area_id,
-                      json_data
+                      json_data,
+                      warehouse_type_id
                     ) VALUES (
                       $1,
                       $2,
@@ -320,7 +347,8 @@ export async function listenQueue(kv: Deno.Kv) {
                       $19,
                       $20,
                       $21,
-                      $22
+                      $22,
+                      $23
                     ) RETURNING id
                   `,
               });
@@ -354,7 +382,8 @@ export async function listenQueue(kv: Deno.Kv) {
 
               await transaction.commit();
               console.log("Transaction successfully committed");
-            } catch (error) {
+              // deno-lint-ignore no-explicit-any
+            } catch (error: any) {
               if (transaction) {
                 console.log("Transaction rollback");
                 await transaction.rollback();
@@ -370,10 +399,7 @@ export async function listenQueue(kv: Deno.Kv) {
             await handleCondominium();
             // deno-lint-ignore no-explicit-any
           } catch (error: any) {
-            console.error(
-              "Failed to handle condominium:",
-              error?.message || error
-            );
+            console.error(error?.message || error);
           }
         }
         break;
