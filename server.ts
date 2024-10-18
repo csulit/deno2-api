@@ -177,7 +177,7 @@ app.get("/", async (c: Context) => {
 
 app.post("/", async (c: Context) => {
   const data = await c.req.json();
-  await sendMessage({ kv, data, options: { delay: 3000 } });
+  await sendMessage({ kv, data, options: { delay: 5000 } });
   return c.text("Hono!");
 });
 
