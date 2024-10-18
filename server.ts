@@ -193,19 +193,21 @@ app.get("/api/properties", async (c: Context) => {
   const totalListingRecords = counterResult.count;
   const pageNo = parseInt(query.page);
   const pageSize = parseInt(query.page_size);
-  
+
   const totalPages = Math.ceil(totalListingRecords / pageSize);
   const nextPage = pageNo < totalPages ? pageNo + 1 : null;
   const previousPage = pageNo > 1 ? pageNo - 1 : null;
-  
-  return c.json({ 
+
+  return c.json({
     data: postgres.rows,
-    total: totalListingRecords,
-    page: pageNo,
-    page_size: pageSize,
-    total_pages: totalPages,
-    next_page: nextPage,
-    previous_page: previousPage
+    pagination: {
+      total: totalListingRecords,
+      page: pageNo,
+      page_size: pageSize,
+      total_pages: totalPages,
+      next_page: nextPage,
+      previous_page: previousPage,
+    },
   });
 });
 
