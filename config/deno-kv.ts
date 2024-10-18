@@ -120,6 +120,10 @@ export async function listenQueue(kv: Deno.Kv) {
             const client_1 = await dbPool.connect();
 
             try {
+              transaction = client_1.createTransaction("create-listing");
+
+              await transaction.begin();
+
               if (!msg.data?.dataLayer) {
                 throw new Error("DataLayer is missing or undefined");
               }
@@ -130,6 +134,27 @@ export async function listenQueue(kv: Deno.Kv) {
               ) {
                 throw new Error(
                   "Attributes are missing, undefined, or have fewer than 5 properties"
+                );
+              }
+
+              if (!msg.data.dataLayer.agent_name) {
+                throw new Error("Agent name is missing or undefined");
+              }
+
+              if (!msg.data.dataLayer.product_owner) {
+                throw new Error("Product owner is missing or undefined");
+              }
+
+              if (!msg.data.dataLayer.product_owner_name) {
+                throw new Error("Product owner name is missing or undefined");
+              }
+
+              if (
+                !msg.data.dataLayer.location ||
+                typeof msg.data.dataLayer.location !== "object"
+              ) {
+                throw new Error(
+                  "Location is missing, undefined, or not an object"
                 );
               }
 
@@ -146,9 +171,6 @@ export async function listenQueue(kv: Deno.Kv) {
                 msg.data.dataLayer.attributes.subcategory === "Warehouse";
               const isLand =
                 msg.data.dataLayer.attributes.subcategory === "Land";
-
-              transaction = client_1.createTransaction("create-listing");
-              await transaction.begin();
 
               const listingRecord = await transaction.queryObject(`
                 SELECT id, property_id
@@ -201,27 +223,6 @@ export async function listenQueue(kv: Deno.Kv) {
                 await transaction.commit();
 
                 return;
-              }
-
-              if (!msg.data.dataLayer.agent_name) {
-                throw new Error("Agent name is missing or undefined");
-              }
-
-              if (!msg.data.dataLayer.product_owner) {
-                throw new Error("Product owner is missing or undefined");
-              }
-
-              if (!msg.data.dataLayer.product_owner_name) {
-                throw new Error("Product owner name is missing or undefined");
-              }
-
-              if (
-                !msg.data.dataLayer.location ||
-                typeof msg.data.dataLayer.location !== "object"
-              ) {
-                throw new Error(
-                  "Location is missing, undefined, or not an object"
-                );
               }
 
               if (isCondominium) {
