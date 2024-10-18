@@ -7,7 +7,7 @@ import { getKvInstance, listenQueue, sendMessage } from "./config/deno-kv.ts";
 const app = new Hono();
 const kv = await getKvInstance();
 
-app.get("/", async (c: Context) => {
+app.get("/api/properties", async (c: Context) => {
   using client = await dbPool.connect();
   const query = c.req.query() as unknown as {
     page?: string;
