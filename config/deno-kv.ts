@@ -255,10 +255,10 @@ export async function listenQueue(kv: Deno.Kv) {
                 propertyId = 4;
               }
 
-              const agentId = msg.data.dataLayer.agent_id;
-              const agentName = msg.data.dataLayer.agent_name;
-              const productOwnerId = msg.data.dataLayer.product_owner;
-              const productOwnerName = msg.data.dataLayer.product_owner_name;
+              const agentId = msg.data.dataLayer?.agent_id;
+              const agentName = msg.data.dataLayer?.agent_name;
+              const productOwnerId = msg.data.dataLayer?.product_owner;
+              const productOwnerName = msg.data.dataLayer?.product_owner_name;
               const location: Location = msg.data.dataLayer.location;
               const dataLayerAttributes = msg.data.dataLayer.attributes;
               const offerTypeId =
