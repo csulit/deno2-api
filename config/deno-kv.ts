@@ -209,6 +209,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 );
 
                 await transaction.commit();
+                console.log("Transaction successfully committed for update");
 
                 return;
               }
@@ -378,7 +379,7 @@ export async function listenQueue(kv: Deno.Kv) {
               });
 
               await transaction.commit();
-              console.log("Transaction successfully committed");
+              console.log("Transaction successfully committed for create");
               // deno-lint-ignore no-explicit-any
             } catch (error: any) {
               if (transaction) {
