@@ -1,18 +1,14 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@hono/hono@*": "4.6.5",
-    "jsr:@hono/hono@^4.6.5": "4.6.5",
     "jsr:@std/dotenv@*": "0.225.2",
     "jsr:@std/dotenv@~0.225.2": "0.225.2",
     "npm:@clerk/backend@^1.13.9": "1.13.9",
     "npm:@hono/clerk-auth@2": "2.0.0_@clerk+backend@1.13.9_hono@4.6.4",
+    "npm:hono@^4.6.6": "4.6.6",
     "npm:zod@^3.23.8": "3.23.8"
   },
   "jsr": {
-    "@hono/hono@4.6.5": {
-      "integrity": "68efe4a0ab7c4fb082cb71aa894a25e1c6cfad6d124dc943471e6758a7a1bdee"
-    },
     "@std/dotenv@0.225.2": {
       "integrity": "e2025dce4de6c7bca21dece8baddd4262b09d5187217e231b033e088e0c4dd23"
     }
@@ -48,7 +44,7 @@
       "integrity": "sha512-ad+U8jDlBPgXBTv8BRnPrSFC/uX8U0ojiCR77I3WWHm5I9L3/bHsZpQ2lgvLTV3YbJyVmAdKJArEAQiPjodGdA==",
       "dependencies": [
         "@clerk/backend",
-        "hono"
+        "hono@4.6.4"
       ]
     },
     "client-only@0.0.1": {
@@ -72,6 +68,9 @@
     },
     "hono@4.6.4": {
       "integrity": "sha512-T5WqBkTOcIQblqBKB5mpzaH/A+dSpvVe938xZJCHOmOuYfF7DSwE/9/10+BMvwSPq9N/f6LiQ38HxrZSQOsXKw=="
+    },
+    "hono@4.6.6": {
+      "integrity": "sha512-euUj5qwvtkG+p38GFs0LYacwaoS2hYRAGn9ysAggiwT2QBcPnT1XYUCW3hatW4C1KzAXTYuQ08BlVDJtAGuhlg=="
     },
     "js-cookie@3.0.5": {
       "integrity": "sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw=="
@@ -276,10 +275,10 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@hono/hono@^4.6.5",
       "jsr:@std/dotenv@~0.225.2",
       "npm:@clerk/backend@^1.13.9",
       "npm:@hono/clerk-auth@2",
+      "npm:hono@^4.6.6",
       "npm:zod@^3.23.8"
     ]
   }
