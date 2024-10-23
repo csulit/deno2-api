@@ -1,15 +1,11 @@
 import "jsr:@std/dotenv/load";
-import { type Context, Hono, cors } from "jsr:@hono/hono";
+import { type Context, Hono } from "jsr:@hono/hono";
 
 import { dbPool } from "./config/postgres.ts";
 import { getKvInstance, listenQueue, sendMessage } from "./config/deno-kv.ts";
 
 const app = new Hono();
 const kv = await getKvInstance();
-
-app.use(cors({
-    origin: "*",
-  }));
 
 app.get("/api/properties", async (c: Context) => {
   using client = await dbPool.connect();
