@@ -23,6 +23,18 @@ app.get("/api/properties", async (c: Context) => {
     search_latitude?: string;
     bounding_box?: string;
     max_distance_km?: string;
+    building_size_min?: string;
+    building_size_max?: string;
+    floor_size_min?: string;
+    floor_size_max?: string;
+    lot_size_min?: string;
+    lot_size_max?: string;
+    no_of_bedrooms_min?: string;
+    no_of_bedrooms_max?: string;
+    no_of_bathrooms_min?: string;
+    no_of_bathrooms_max?: string;
+    no_of_parking_spaces_min?: string;
+    no_of_parking_spaces_max?: string;
   };
 
   if (!query.page) {
@@ -101,10 +113,59 @@ app.get("/api/properties", async (c: Context) => {
     );
   }
 
-  // Example of how to add a new condition in the future:
-  // if (someNewCondition) {
-  //   addWhereCondition(`new_column = $${paramCounter}`, newValue);
-  // }
+  // Add building size range condition if both min and max are provided
+  if (query.building_size_min && query.building_size_max) {
+    addWhereCondition(
+      `p.building_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseFloat(query.building_size_min),
+      parseFloat(query.building_size_max)
+    );
+  }
+
+  // Add floor size range condition if both min and max are provided
+  if (query.floor_size_min && query.floor_size_max) {
+    addWhereCondition(
+      `p.floor_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseFloat(query.floor_size_min),
+      parseFloat(query.floor_size_max)
+    );
+  }
+
+  // Add lot size range condition if both min and max are provided
+  if (query.lot_size_min && query.lot_size_max) {
+    addWhereCondition(
+      `p.lot_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseFloat(query.lot_size_min),
+      parseFloat(query.lot_size_max)
+    );
+  }
+
+  // Add number of bedrooms range condition if both min and max are provided
+  if (query.no_of_bedrooms_min && query.no_of_bedrooms_max) {
+    addWhereCondition(
+      `p.no_of_bedrooms BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseInt(query.no_of_bedrooms_min),
+      parseInt(query.no_of_bedrooms_max)
+    );
+  }
+
+  // Add number of bathrooms range condition if both min and max are provided
+  if (query.no_of_bathrooms_min && query.no_of_bathrooms_max) {
+    addWhereCondition(
+      `p.no_of_bathrooms BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseInt(query.no_of_bathrooms_min),
+      parseInt(query.no_of_bathrooms_max)
+    );
+  }
+
+  // Add number of parking spaces range condition if both min and max are provided
+  if (query.no_of_parking_spaces_min && query.no_of_parking_spaces_max) {
+    addWhereCondition(
+      `p.no_of_parking_spaces BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseInt(query.no_of_parking_spaces_min),
+      parseInt(query.no_of_parking_spaces_max)
+    );
+  }
 
   console.log({ sqlWhereClause, sqlParams, nextParamCounter: paramCounter });
 

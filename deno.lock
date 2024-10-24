@@ -5,6 +5,7 @@
     "jsr:@std/dotenv@~0.225.2": "0.225.2",
     "npm:@clerk/backend@^1.13.9": "1.13.9",
     "npm:@hono/clerk-auth@2": "2.0.0_@clerk+backend@1.13.9_hono@4.6.4",
+    "npm:hono@*": "4.6.6",
     "npm:hono@^4.6.6": "4.6.6",
     "npm:zod@^3.23.8": "3.23.8"
   },
