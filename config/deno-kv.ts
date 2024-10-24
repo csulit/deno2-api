@@ -1,4 +1,4 @@
-import type { Transaction } from "postgres";
+import type { PoolClient, Transaction } from "postgres";
 import { dbPool } from "./postgres.ts";
 
 let db: Deno.Kv | null = null;
@@ -39,27 +39,27 @@ export async function sendMessage(arg: {
   await kv.enqueue(data, options);
 }
 
-async function getLocation(transaction: Transaction, dataLayer: Location) {
-  let region = await transaction.queryObject(`
+async function getLocation(client: PoolClient, dataLayer: Location) {
+  let region = await client.queryObject(`
     SELECT id, listing_region_id
     FROM Listing_Region
     WHERE region = '${dataLayer.region}'
   `);
 
-  let city = await transaction.queryObject(`
+  let city = await client.queryObject(`
     SELECT id, listing_city_id
     FROM Listing_City
     WHERE city = '${dataLayer.city}'
   `);
 
-  let area = await transaction.queryObject(`
+  let area = await client.queryObject(`
     SELECT id
     FROM Listing_Area
     WHERE listing_area_id = '${dataLayer?.listing_area_id || null}'
   `);
 
   if (region.rowCount === 0) {
-    region = await transaction.queryObject(`
+    region = await client.queryObject(`
       INSERT INTO Listing_Region (region, listing_region_id)
       VALUES ('${dataLayer.region}', '${dataLayer.listing_region_id}')
       RETURNING id, listing_region_id
@@ -69,7 +69,7 @@ async function getLocation(transaction: Transaction, dataLayer: Location) {
   if (city.rowCount === 0) {
     const createdRegion = region.rows[0] as { listing_region_id: number };
 
-    city = await transaction.queryObject(`
+    city = await client.queryObject(`
       INSERT INTO Listing_City (city, listing_city_id, listing_region_id)
       VALUES ('${dataLayer.city}', '${dataLayer.listing_city_id}', '${createdRegion.listing_region_id}')
       RETURNING id, listing_city_id
@@ -77,7 +77,7 @@ async function getLocation(transaction: Transaction, dataLayer: Location) {
   }
 
   if (area.rowCount === 0) {
-    area = await transaction.queryObject(`
+    area = await client.queryObject(`
       INSERT INTO Listing_Area (area, listing_area_id)
       VALUES ('${dataLayer.area}', '${dataLayer.listing_area_id}')
       RETURNING id
@@ -100,7 +100,7 @@ function cleanSpecialCharacters(input: string): string {
   // Remove emojis and other special characters
   const cleanedString = encodedString.replace(
     /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu,
-    "",
+    ""
   );
 
   // Remove extra whitespace
@@ -118,6 +118,7 @@ export async function listenQueue(kv: Deno.Kv) {
           const handleCondominium = async () => {
             let transaction;
             const client_1 = await dbPool.connect();
+            const client_2 = await dbPool.connect();
 
             try {
               transaction = client_1.createTransaction("create-listing");
@@ -133,7 +134,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 Object.keys(msg.data.dataLayer.attributes).length < 5
               ) {
                 throw new Error(
-                  "Attributes are missing, undefined, or have fewer than 5 properties",
+                  "Attributes are missing, undefined, or have fewer than 5 properties"
                 );
               }
 
@@ -142,7 +143,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 typeof msg.data.dataLayer.location !== "object"
               ) {
                 throw new Error(
-                  "Location is missing, undefined, or not an object",
+                  "Location is missing, undefined, or not an object"
                 );
               }
 
@@ -152,7 +153,7 @@ export async function listenQueue(kv: Deno.Kv) {
               const images = msg.data.images as { src: string }[];
               const isCondominium =
                 msg.data.dataLayer.attributes.attribute_set_name ===
-                  "Condominium";
+                "Condominium";
               const isHouse =
                 msg.data.dataLayer.attributes.attribute_set_name === "House";
               const isWarehouse =
@@ -173,8 +174,8 @@ export async function listenQueue(kv: Deno.Kv) {
                 };
 
                 const price = msg.data.dataLayer?.attributes?.price;
-                const priceFormatted = msg.data.dataLayer?.attributes
-                  ?.price_formatted;
+                const priceFormatted =
+                  msg.data.dataLayer?.attributes?.price_formatted;
 
                 await transaction.queryArray({
                   args: [price, priceFormatted, listing.id],
@@ -199,6 +200,8 @@ export async function listenQueue(kv: Deno.Kv) {
                 });
 
                 await transaction.commit();
+                client_1.release();
+                client_2.release();
                 console.log("Transaction successfully committed for update");
 
                 return;
@@ -252,11 +255,11 @@ export async function listenQueue(kv: Deno.Kv) {
               const productOwnerName = msg.data.dataLayer?.product_owner_name;
               const location: Location = msg.data.dataLayer.location;
               const dataLayerAttributes = msg.data.dataLayer.attributes;
-              const offerTypeId = dataLayerAttributes.offer_type === "Rent"
-                ? 2
-                : 1;
+              const offerTypeId =
+                dataLayerAttributes.offer_type === "Rent" ? 2 : 1;
               const sellerIsTrusted = dataLayerAttributes?.seller_is_trusted;
-              const locationData = await getLocation(transaction, {
+
+              const locationData = await getLocation(client_2, {
                 ...location,
                 listing_area_id: dataLayerAttributes?.listing_area_id,
               });
@@ -365,8 +368,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   offerTypeId,
                   newProperty,
                 ],
-                text:
-                  `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
+                text: `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
               });
 
@@ -382,6 +384,7 @@ export async function listenQueue(kv: Deno.Kv) {
             } finally {
               console.log("Connection released");
               client_1.release();
+              client_2.release();
             }
           };
 
