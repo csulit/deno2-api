@@ -4,7 +4,7 @@ import { dbPool } from "./postgres.ts";
 let db: Deno.Kv | null = null;
 
 export interface KvMessage {
-  type: "CREATE_LISTING" | "PROPERTY_VALUATION";
+  type: "CREATE_LISTING" | "CREATE_RAW_LAMUDI_DATA" | "PROPERTY_VALUATION";
   source: "LAMUDI" | "APP";
   // deno-lint-ignore no-explicit-any
   data: any;
@@ -150,7 +150,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 );
               }
 
-              let propertyId;
+              let propertyTypeId;
               let warehouseTypeId;
               const listingUrl = msg.data.listingUrl;
               const images = msg.data.images as { src: string }[];
@@ -211,11 +211,11 @@ export async function listenQueue(kv: Deno.Kv) {
               }
 
               if (isCondominium) {
-                propertyId = 1;
+                propertyTypeId = 1;
               }
 
               if (isHouse) {
-                propertyId = 2;
+                propertyTypeId = 2;
               }
 
               if (isWarehouse) {
@@ -245,11 +245,11 @@ export async function listenQueue(kv: Deno.Kv) {
                   warehouseTypeId = newWarehouseType.rows[0][0] as number;
                 }
 
-                propertyId = 3;
+                propertyTypeId = 3;
               }
 
               if (isLand) {
-                propertyId = 4;
+                propertyTypeId = 4;
               }
 
               const agentId = msg.data.dataLayer?.agent_id;
@@ -292,7 +292,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     ),
                     JSON.stringify(dataLayerAttributes?.indoor_features || {}),
                     JSON.stringify(dataLayerAttributes?.outdoor_features || {}),
-                    propertyId,
+                    propertyTypeId,
                     dataLayerAttributes?.address || null,
                     region.id,
                     city.id,
@@ -412,6 +412,32 @@ export async function listenQueue(kv: Deno.Kv) {
             // deno-lint-ignore no-explicit-any
           } catch (error: any) {
             console.error(error?.message || error);
+          }
+        }
+        break;
+      case "CREATE_RAW_LAMUDI_DATA":
+        {
+          let transaction: Transaction | null = null;
+          const client_1 = await dbPool.connect();
+          try {
+            transaction = client_1.createTransaction("create-raw-lamudi-data");
+            await transaction.begin();
+            await transaction.queryObject({
+              args: [
+                JSON.stringify(msg.data),
+                msg.data.listingUrl,
+                JSON.stringify(msg.data.images),
+              ],
+              text: `INSERT INTO Lamudi_raw_data (json_data, listingUrl, images) VALUES ($1, $2, $3)`,
+            });
+            await transaction.commit();
+            console.log("Transaction successfully committed for create");
+          } catch (error) {
+            if (transaction) await transaction.rollback();
+            console.error(error);
+          } finally {
+            client_1.release();
+            console.log("Connection released");
           }
         }
         break;

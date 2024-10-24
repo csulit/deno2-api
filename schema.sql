@@ -75,7 +75,6 @@ CREATE TABLE Property (
     ai_generated_basic_features JSONB,
     property_type_id INT NOT NULL REFERENCES Property_Type(property_type_id),
     warehouse_type_id INT REFERENCES Warehouse_Type(warehouse_type_id),
-    json_data JSONB,
     address VARCHAR(255),
     listing_region_id INT NOT NULL REFERENCES Listing_Region(id) ON DELETE CASCADE,
     listing_city_id INT NOT NULL REFERENCES Listing_City(id) ON DELETE CASCADE,
@@ -111,6 +110,15 @@ CREATE TABLE Price_Change_Log (
    new_price DOUBLE PRECISION NOT NULL,
    change_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    FOREIGN KEY (listing_id) REFERENCES Listing(id)
+);
+
+CREATE TABLE Lamudi_raw_data (
+    json_data JSONB,
+    listingUrl TEXT,
+    images JSONB,
+    is_process BOOLEAN default false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_property_type_id ON Property(property_type_id);
@@ -200,9 +208,22 @@ BEFORE INSERT OR UPDATE ON property
 FOR EACH ROW
 EXECUTE FUNCTION check_images_format();
 
-UPDATE Property
-SET geog = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
-WHERE id > 0;
+-- Step 1: Create the function that deletes rows with is_process = true
+CREATE OR REPLACE FUNCTION delete_processed_rows() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.is_process = TRUE THEN
+        DELETE FROM Lamudi_raw_data WHERE id = NEW.id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Step 2: Create the trigger that fires the function after an update
+CREATE TRIGGER trigger_delete_processed
+AFTER UPDATE ON Lamudi_raw_data
+FOR EACH ROW
+WHEN (NEW.is_process = TRUE)
+EXECUTE FUNCTION delete_processed_rows();
 
 EXPLAIN ANALYZE
 WITH params AS (
