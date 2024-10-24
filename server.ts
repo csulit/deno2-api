@@ -29,6 +29,8 @@ app.get("/api/properties", async (c: Context) => {
     floor_size_max?: string;
     lot_size_min?: string;
     lot_size_max?: string;
+    ceiling_height_min?: string;
+    ceiling_height_max?: string;
     no_of_bedrooms_min?: string;
     no_of_bedrooms_max?: string;
     no_of_bathrooms_min?: string;
@@ -137,6 +139,15 @@ app.get("/api/properties", async (c: Context) => {
       `p.lot_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseFloat(query.lot_size_min),
       parseFloat(query.lot_size_max)
+    );
+  }
+
+  // Add ceiling height range condition if both min and max are provided
+  if (query.ceiling_height_min && query.ceiling_height_max) {
+    addWhereCondition(
+      `p.ceiling_height BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseFloat(query.ceiling_height_min),
+      parseFloat(query.ceiling_height_max)
     );
   }
 
