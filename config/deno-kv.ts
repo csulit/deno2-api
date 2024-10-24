@@ -116,11 +116,17 @@ export async function listenQueue(kv: Deno.Kv) {
       case "CREATE_LISTING":
         if (msg.source === "LAMUDI" && msg.data.listingUrl && msg.data) {
           const handleCondominium = async () => {
-            let transaction;
+            let transaction: Transaction | null = null;
             const client_1 = await dbPool.connect();
             const client_2 = await dbPool.connect();
 
             try {
+              const attributesLength = Object.keys(
+                msg.data.dataLayer.attributes
+              ).length;
+
+              console.log("attributesLength:", attributesLength);
+
               transaction = client_1.createTransaction("create-listing");
 
               await transaction.begin();
@@ -129,12 +135,9 @@ export async function listenQueue(kv: Deno.Kv) {
                 throw new Error("DataLayer is missing or undefined");
               }
 
-              if (
-                !msg.data.dataLayer.attributes ||
-                Object.keys(msg.data.dataLayer.attributes).length < 5
-              ) {
+              if (!msg.data.dataLayer.attributes || attributesLength < 3) {
                 throw new Error(
-                  "Attributes are missing, undefined, or have fewer than 5 properties"
+                  "Attributes are missing, undefined, or have fewer than 3 properties"
                 );
               }
 
