@@ -272,7 +272,7 @@ export async function listenQueue(kv: Deno.Kv) {
               let property;
 
               try {
-                property = await transaction.queryArray({
+                property = await transaction.queryObject({
                   args: [
                     dataLayerAttributes?.floor_size || 0,
                     dataLayerAttributes?.land_size || 0,
@@ -357,7 +357,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 throw error;
               }
 
-              const newProperty = property.rows[0][0] as number;
+              const newProperty = property.rows[0] as { id: number };
 
               const address = `${
                 dataLayerAttributes?.listing_area
@@ -366,7 +366,7 @@ export async function listenQueue(kv: Deno.Kv) {
               }${dataLayerAttributes.listing_city}`;
 
               try {
-                await transaction.queryArray({
+                await transaction.queryObject({
                   args: [
                     msg.data.dataLayer?.title,
                     `https://www.lamudi.com.ph/${dataLayerAttributes?.urlkey_details}`,
@@ -381,7 +381,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       : null,
                     dataLayerAttributes?.price || 0,
                     offerTypeId,
-                    newProperty,
+                    newProperty.id,
                   ],
                   text: `INSERT INTO Listing (title, url, project_name, description, is_scraped, address, price_formatted, price, offer_type_id, property_id)
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
