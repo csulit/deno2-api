@@ -496,10 +496,12 @@ export async function listenQueue(kv: Deno.Kv) {
 
               // Update all processed properties in transaction
               for (const prop of processedProperty) {
+                await transaction.begin();
                 await transaction.queryObject({
                   args: [prop.ai_generated_description, prop.id],
                   text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
                 });
+                await transaction.commit();
               }
             }
 
