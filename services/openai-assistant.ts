@@ -35,7 +35,7 @@ export const openaiAssistant = async (question: string) => {
         'To learn more or schedule a viewing, please contact our team.',
       ]
 
-      do not include '\n' in your response I need a clean array of strings
+      do not include '\n' in your response I need a clean array of strings and do not include the coordinates in your response you will only use the listing_address, listing_region_name, listing_city_name, and listing_area_name if they are provided
       `,
     model: "gpt-4o",
   });
