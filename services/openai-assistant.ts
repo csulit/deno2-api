@@ -40,7 +40,7 @@ export const openaiAssistant = async (question: string) => {
       2. Only use standard markdown syntax
       3. Ensure all quotes are properly escaped
       4. Only include location details from listing_address, listing_region_name, listing_city_name, and listing_area_name if provided
-      5. The response must be a valid JSON array in string format that can be parsed
+      5. The response must be a valid JSON array in string format that can be parsed without the triple backticks and json prefix
       `,
     model: "gpt-4o",
   });
