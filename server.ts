@@ -461,12 +461,21 @@ app.get("/api/properties/:id", async (c: Context) => {
   if (query.regenerate_ai_description === "true") {
     const aiDescription = await openaiAssistant(JSON.stringify(propertyData));
 
-    propertyData.ai_generated_description = aiDescription;
+    try {
+      // Verify the aiDescription is valid JSON by parsing it
+      JSON.parse(aiDescription);
+      
+      propertyData.ai_generated_description = aiDescription;
 
-    await client.queryObject({
-      args: [propertyData.id, JSON.stringify(aiDescription)],
-      text: `UPDATE Property SET ai_generated_description = $2 WHERE id = $1`,
-    });
+      await client.queryObject({
+        args: [propertyData.id, JSON.stringify(aiDescription)],
+        text: `UPDATE Property SET ai_generated_description = $2 WHERE id = $1`,
+      });
+    } catch (error) {
+      console.error("Invalid AI description format:", error);
+      // Keep the existing description if new one is invalid
+      propertyData.ai_generated_description = propertyData.ai_generated_description || null;
+    }
   }
 
   return c.json({ data: propertyData });
