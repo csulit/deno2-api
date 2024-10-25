@@ -4,13 +4,17 @@ import { cors } from "npm:hono/cors";
 
 import { dbPool } from "./config/postgres.ts";
 import { getKvInstance, listenQueue, sendMessage } from "./config/deno-kv.ts";
+import { openaiAssistant } from "./services/openai-assistant.ts";
 
 const app = new Hono();
 const kv = await getKvInstance();
 
-app.use("*", cors({
-  origin: "*",
-}));
+app.use(
+  "*",
+  cors({
+    origin: "*",
+  }),
+);
 
 app.get("/api/properties", async (c: Context) => {
   using client = await dbPool.connect();
@@ -131,7 +135,7 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(
       `p.building_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseFloat(query.building_size_min),
-      parseFloat(query.building_size_max)
+      parseFloat(query.building_size_max),
     );
   }
 
@@ -140,7 +144,7 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(
       `p.floor_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseFloat(query.floor_size_min),
-      parseFloat(query.floor_size_max)
+      parseFloat(query.floor_size_max),
     );
   }
 
@@ -149,7 +153,7 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(
       `p.lot_size BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseFloat(query.lot_size_min),
-      parseFloat(query.lot_size_max)
+      parseFloat(query.lot_size_max),
     );
   }
 
@@ -158,7 +162,7 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(
       `p.ceiling_height BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseFloat(query.ceiling_height_min),
-      parseFloat(query.ceiling_height_max)
+      parseFloat(query.ceiling_height_max),
     );
   }
 
@@ -167,7 +171,7 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(
       `p.no_of_bedrooms BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseInt(query.no_of_bedrooms_min),
-      parseInt(query.no_of_bedrooms_max)
+      parseInt(query.no_of_bedrooms_max),
     );
   }
 
@@ -176,16 +180,18 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(
       `p.no_of_bathrooms BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
       parseInt(query.no_of_bathrooms_min),
-      parseInt(query.no_of_bathrooms_max)
+      parseInt(query.no_of_bathrooms_max),
     );
   }
 
   // Add number of parking spaces range condition if both min and max are provided
   if (query.no_of_parking_spaces_min && query.no_of_parking_spaces_max) {
     addWhereCondition(
-      `p.no_of_parking_spaces BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      `p.no_of_parking_spaces BETWEEN $${paramCounter} AND $${
+        paramCounter + 1
+      }`,
       parseInt(query.no_of_parking_spaces_min),
-      parseInt(query.no_of_parking_spaces_max)
+      parseInt(query.no_of_parking_spaces_max),
     );
   }
 
@@ -198,10 +204,13 @@ app.get("/api/properties", async (c: Context) => {
   let orderByClause = "";
   const validSortFields = ["id", "created_at", "price"];
   const validSortOrders = ["ASC", "DESC"];
-  
-  if (validSortFields.includes(query.sort_by) && 
-      validSortOrders.includes(query.sort_order.toUpperCase())) {
-    orderByClause = `ORDER BY l.${query.sort_by} ${query.sort_order.toUpperCase()}`;
+
+  if (
+    validSortFields.includes(query.sort_by) &&
+    validSortOrders.includes(query.sort_order.toUpperCase())
+  ) {
+    orderByClause =
+      `ORDER BY l.${query.sort_by} ${query.sort_order.toUpperCase()}`;
   } else {
     orderByClause = "ORDER BY l.created_at DESC";
   }
@@ -322,13 +331,20 @@ app.get("/api/properties", async (c: Context) => {
 app.get("/api/properties/valuation", async (c: Context) => {
   const data = c.req.query();
 
-  if (!data.property_type_id || !data.size_in_sqm) {
-    return c.json({ error: "Property type and size are required" }, 400);
+  if (!data.property_type_id || !data.size_in_sqm || !data.city_id) {
+    return c.json({ error: "Property type, size and city are required" }, 400);
   }
 
   const propertyTypeId = parseInt(data.property_type_id);
   if (propertyTypeId < 1 || propertyTypeId > 4) {
-    return c.json({ error: "Invalid property type ID. Must be between 1 and 4" }, 400);
+    return c.json({
+      error: "Invalid property type ID. Must be between 1 and 4",
+    }, 400);
+  }
+
+  const cityId = parseInt(data.city_id);
+  if (isNaN(cityId) || cityId < 1) {
+    return c.json({ error: "Invalid city ID" }, 400);
   }
 
   return c.json({ data: null });
@@ -337,7 +353,7 @@ app.get("/api/properties/valuation", async (c: Context) => {
 app.get("/api/properties/cities", async (c: Context) => {
   using client = await dbPool.connect();
   const query = c.req.query();
-  const search = query.search || '';
+  const search = query.search || "";
 
   const cities = await client.queryObject({
     args: [`%${search}%`],
@@ -353,17 +369,18 @@ app.get("/api/properties/cities", async (c: Context) => {
       WHERE LOWER(ct.city) LIKE LOWER($1)
       ORDER BY ct.city ASC
       LIMIT 10
-    `
+    `,
   });
 
-  return c.json({ 
-    data: cities.rows
+  return c.json({
+    data: cities.rows,
   });
 });
 
 app.get("/api/properties/:id", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
+  const query = c.req.query();
 
   if (!id) {
     return c.json({ error: "Property ID is required" }, 400);
@@ -439,7 +456,20 @@ app.get("/api/properties/:id", async (c: Context) => {
     `,
   });
 
-  return c.json({ data: property.rows[0] });
+  const propertyData = property.rows[0] as any;
+
+  if (query.regenerate_ai_description === "true") {
+    const aiDescription = await openaiAssistant(JSON.stringify(propertyData));
+
+    propertyData.ai_generated_description = aiDescription;
+
+    await client.queryObject({
+      args: [propertyData.id, aiDescription],
+      text: `UPDATE Property SET ai_generated_description = $2 WHERE id = $1`,
+    });
+  }
+
+  return c.json({ data: propertyData });
 });
 
 app.post("/", async (c: Context) => {
