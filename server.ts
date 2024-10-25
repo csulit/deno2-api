@@ -464,16 +464,16 @@ app.get("/api/properties/:id", async (c: Context) => {
       propertyData.ai_generated_description = null;
     }
 
-    const aiDescription = await openaiAssistant(JSON.stringify(propertyData));
+    const aiGeneratedDescription = await openaiAssistant(JSON.stringify(propertyData));
 
     try {
       // Verify the aiDescription is valid JSON by parsing it
-      JSON.parse(aiDescription.replace("```", "").replace("```json", ""));
+      JSON.parse(aiGeneratedDescription.includes("```json") ? aiGeneratedDescription.replace("```json", "").replace("```", "") : aiGeneratedDescription);
 
-      propertyData.ai_generated_description = aiDescription;
+      propertyData.ai_generated_description = aiGeneratedDescription;
 
       await client.queryObject({
-        args: [propertyData.id, JSON.stringify(aiDescription)],
+        args: [propertyData.id, JSON.stringify(aiGeneratedDescription)],
         text: `UPDATE Property SET ai_generated_description = $2 WHERE id = $1`,
       });
     } catch (error) {
