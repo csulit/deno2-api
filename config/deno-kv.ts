@@ -495,15 +495,15 @@ export async function listenQueue(kv: Deno.Kv) {
               }
 
               // Update all processed properties in transaction
-              for (const prop of processedProperty) {
-                await transaction.queryObject({
-                  args: [prop.ai_generated_description, prop.id],
-                  text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
-                });
-
-                await transaction.commit();
-              }
+              // for (const prop of processedProperty) {
+              //   await transaction.queryObject({
+              //     args: [prop.ai_generated_description, prop.id],
+              //     text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
+              //   });
+              // }
             }
+
+            console.log(processedProperty);
 
             await transaction.commit();
             console.log("Transaction successfully committed for create");
