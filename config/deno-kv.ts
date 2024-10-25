@@ -463,7 +463,7 @@ export async function listenQueue(kv: Deno.Kv) {
             await transaction.begin();
 
             const property = await transaction.queryObject(
-              `SELECT * FROM Property WHERE ai_generated_description IS NULL LIMIT 10 ORDER BY created_at DESC`
+              `SELECT * FROM Property WHERE ai_generated_description IS NULL ORDER BY created_at DESC LIMIT 10`
             );
 
             // if (property.rowCount && property.rowCount > 0) {
