@@ -37,7 +37,7 @@ export const openaiAssistant = async (question: string) => {
 
       do not include '\n' in your response I need a clean array of strings
       `,
-    model: "gpt-4",
+    model: "gpt-4o",
   });
 
   const thread = await openai.beta.threads.create();
