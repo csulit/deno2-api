@@ -462,7 +462,7 @@ export async function listenQueue(kv: Deno.Kv) {
               text: `SELECT * FROM Property WHERE ai_generated_description IS NULL LIMIT 10 ORDER BY created_at DESC`,
             });
 
-            if (property.rowCount && property.rowCount > 0 && transaction) {
+            if (property.rowCount && property.rowCount > 0) {
               // Process properties in parallel with rate limiting
               const processProperty = async (row: unknown) => {
                 const propertyData = row as {
@@ -473,7 +473,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   JSON.stringify(row)
                 );
 
-                if (aiGeneratedDescription) {
+                if (aiGeneratedDescription && transaction) {
                   await transaction.queryObject({
                     args: [aiGeneratedDescription, propertyData.id],
                     text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
