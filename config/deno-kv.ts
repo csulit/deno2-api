@@ -485,12 +485,12 @@ export async function listenQueue(kv: Deno.Kv) {
                 }
               };
 
-              // Process 2 properties at a time with 5s delay between batches
+              // Process 2 properties at a time with 2s delay between batches
               for (let i = 0; i < property.rows.length; i += 2) {
                 const batch = property.rows.slice(i, i + 2);
                 await Promise.all(batch.map(processProperty));
                 if (i + 2 < property.rows.length) {
-                  await new Promise((resolve) => setTimeout(resolve, 5000));
+                  await new Promise((resolve) => setTimeout(resolve, 2000));
                 }
               }
 
