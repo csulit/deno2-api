@@ -331,8 +331,8 @@ app.get("/api/properties", async (c: Context) => {
 app.get("/api/properties/valuation", async (c: Context) => {
   const data = c.req.query();
 
-  if (!data.property_type_id || !data.size_in_sqm || !data.city_id) {
-    return c.json({ error: "Property type, size and city are required" }, 400);
+  if (!data.property_type_id || !data.size_in_sqm) {
+    return c.json({ error: "Property type and size are required" }, 400);
   }
 
   const propertyTypeId = parseInt(data.property_type_id);
@@ -342,12 +342,80 @@ app.get("/api/properties/valuation", async (c: Context) => {
     }, 400);
   }
 
-  const cityId = parseInt(data.city_id);
-  if (isNaN(cityId) || cityId < 1) {
-    return c.json({ error: "Invalid city ID" }, 400);
+  using client = await dbPool.connect();
+  const sizeInSqm = parseFloat(data.size_in_sqm);
+  if (isNaN(sizeInSqm) || sizeInSqm <= 0) {
+    return c.json({ error: "Invalid size value" }, 400);
   }
 
-  return c.json({ data: null });
+  const queryParams: (number)[] = [propertyTypeId, sizeInSqm];
+  let cityClause = '';
+  
+  if (data.city_id) {
+    const cityId = parseInt(data.city_id);
+    if (isNaN(cityId) || cityId < 1) {
+      return c.json({ error: "Invalid city ID" }, 400);
+    }
+    queryParams.push(cityId);
+    cityClause = 'AND p.listing_city_id = $3';
+  }
+
+  interface PropertyStats {
+    offer_type_id: number;
+    average_price: number;
+    total_comparable_properties: number;
+  }
+
+  const properties = await client.queryObject<PropertyStats>({
+    args: queryParams,
+    text: `
+      WITH PropertyStats AS (
+        SELECT
+          l.price,
+          l.offer_type_id
+        FROM Property p
+        JOIN Listing l ON p.id = l.property_id
+        WHERE 
+          p.property_type_id = $1
+          ${cityClause}
+          AND CASE 
+            WHEN p.property_type_id IN (1, 3) THEN p.building_size BETWEEN $2 * 0.8 AND $2 * 1.2
+            ELSE p.lot_size BETWEEN $2 * 0.8 AND $2 * 1.2
+          END
+          AND l.price > 0
+      )
+      SELECT
+        l.offer_type_id,
+        ROUND(AVG(price)::numeric, 2) as average_price,
+        COUNT(*) as total_comparable_properties
+      FROM PropertyStats l
+      GROUP BY l.offer_type_id
+    `
+  });
+
+  if (!properties.rows.length) {
+    return c.json({ 
+      error: "Not enough data to generate valuation for the specified criteria" 
+    }, 404);
+  }
+
+  const valuationData = properties.rows.reduce((acc, row) => {
+    const type = row.offer_type_id === 1 ? 'buy' : 'rent';
+    const formattedPrice = new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 2
+    }).format(row.average_price);
+    
+    acc[type] = {
+      average_price: row.average_price.toString(),
+      formatted_price: formattedPrice,
+      total_comparable_properties: row.total_comparable_properties.toString()
+    };
+    return acc;
+  }, {} as Record<string, {average_price: string, formatted_price: string, total_comparable_properties: string}>);
+
+  return c.json({ data: valuationData });
 });
 
 app.get("/api/properties/cities", async (c: Context) => {
