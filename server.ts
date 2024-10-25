@@ -37,6 +37,7 @@ app.get("/api/properties", async (c: Context) => {
     no_of_bathrooms_max?: string;
     no_of_parking_spaces_min?: string;
     no_of_parking_spaces_max?: string;
+    ai_generated_description?: string;
   };
 
   if (!query.page) {
@@ -176,6 +177,11 @@ app.get("/api/properties", async (c: Context) => {
       parseInt(query.no_of_parking_spaces_min),
       parseInt(query.no_of_parking_spaces_max)
     );
+  }
+
+  // Add AI generated description filter if value is 1
+  if (query.ai_generated_description === "1") {
+    addWhereCondition(`p.ai_generated_description IS NOT NULL`);
   }
 
   console.log({ sqlWhereClause, sqlParams, nextParamCounter: paramCounter });
