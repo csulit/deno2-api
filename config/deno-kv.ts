@@ -448,21 +448,10 @@ export async function listenQueue(kv: Deno.Kv) {
         break;
       case "CREATE_AI_GENERATED_DESCRIPTION":
         {
-          let transaction: Transaction | null = null;
           const client_1 = await dbPool.connect();
-          let processedProperty: {
-            id: number;
-            ai_generated_description: string;
-          }[] = [];
 
           try {
-            transaction = client_1.createTransaction(
-              "create-ai-generated-description"
-            );
-
-            await transaction.begin();
-
-            const property = await transaction.queryObject(
+            const property = await client_1.queryObject(
               `SELECT * FROM Property WHERE ai_generated_description IS NULL ORDER BY created_at DESC LIMIT 10`
             );
 
@@ -478,9 +467,9 @@ export async function listenQueue(kv: Deno.Kv) {
                 );
 
                 if (aiGeneratedDescription) {
-                  processedProperty.push({
-                    id: propertyData.id,
-                    ai_generated_description: aiGeneratedDescription,
+                  await client_1.queryObject({
+                    args: [aiGeneratedDescription, propertyData.id],
+                    text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
                   });
                 }
               };
@@ -493,24 +482,10 @@ export async function listenQueue(kv: Deno.Kv) {
                   await new Promise((resolve) => setTimeout(resolve, 2000));
                 }
               }
-
-              // Update all processed properties in transaction
-              for (const prop of processedProperty) {
-                await transaction.begin();
-                await transaction.queryObject({
-                  args: [prop.ai_generated_description, prop.id],
-                  text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
-                });
-                await transaction.commit();
-              }
             }
 
-            await transaction.commit();
-            console.log("Transaction successfully committed for create");
-            // Reset processed properties after successful commit
-            processedProperty = [];
+            console.log("Successfully processed ai generated description");
           } catch (error) {
-            if (transaction) await transaction.rollback();
             console.error(error);
           } finally {
             client_1.release();
