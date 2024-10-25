@@ -1,10 +1,15 @@
 import type { PoolClient, Transaction } from "postgres";
 import { dbPool } from "./postgres.ts";
+import { openaiAssistant } from "../services/openai-assistant.ts";
 
 let db: Deno.Kv | null = null;
 
 export interface KvMessage {
-  type: "CREATE_LISTING" | "CREATE_RAW_LAMUDI_DATA" | "PROPERTY_VALUATION";
+  type:
+    | "CREATE_LISTING"
+    | "CREATE_RAW_LAMUDI_DATA"
+    | "CREATE_AI_GENERATED_DESCRIPTION"
+    | "PROPERTY_VALUATION";
   source: "LAMUDI" | "APP";
   // deno-lint-ignore no-explicit-any
   data: any;
@@ -441,9 +446,60 @@ export async function listenQueue(kv: Deno.Kv) {
           }
         }
         break;
-      case "PROPERTY_VALUATION":
-        if (msg.source === "APP") {
-          console.log(JSON.stringify(msg, null, 2));
+      case "CREATE_AI_GENERATED_DESCRIPTION":
+        {
+          let transaction: Transaction | null = null;
+          const client_1 = await dbPool.connect();
+          try {
+            transaction = client_1.createTransaction(
+              "create-ai-generated-description"
+            );
+
+            await transaction.begin();
+
+            const property = await transaction.queryObject({
+              args: [],
+              text: `SELECT * FROM Property WHERE ai_generated_description IS NULL LIMIT 10 ORDER BY created_at DESC`,
+            });
+
+            if (property.rowCount && property.rowCount > 0 && transaction) {
+              // Process properties in parallel with rate limiting
+              const processProperty = async (row: unknown) => {
+                const propertyData = row as {
+                  id: number;
+                };
+
+                const aiGeneratedDescription = await openaiAssistant(
+                  JSON.stringify(row)
+                );
+
+                if (aiGeneratedDescription) {
+                  await transaction.queryObject({
+                    args: [aiGeneratedDescription, propertyData.id],
+                    text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
+                  });
+                }
+              };
+
+              // Process 2 properties at a time with 5s delay between batches
+              for (let i = 0; i < property.rows.length; i += 2) {
+                const batch = property.rows.slice(i, i + 2);
+                await Promise.all(batch.map(processProperty));
+                if (i + 2 < property.rows.length) {
+                  await new Promise((resolve) => setTimeout(resolve, 5000));
+                }
+              }
+            }
+
+            await transaction.commit();
+            console.log("Transaction successfully committed for create");
+          } catch (error) {
+            if (transaction) await transaction.rollback();
+            console.error(error);
+          } finally {
+            client_1.release();
+            console.log("Connection released");
+          }
         }
         break;
     }

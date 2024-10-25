@@ -71,7 +71,7 @@ CREATE TABLE Property (
     property_features JSONB,
     indoor_features JSONB,
     outdoor_features JSONB,
-    ai_generated_description TEXT,
+    ai_generated_description JSONB,
     ai_generated_basic_features JSONB,
     property_type_id INT NOT NULL REFERENCES Property_Type(property_type_id),
     warehouse_type_id INT REFERENCES Warehouse_Type(warehouse_type_id),
