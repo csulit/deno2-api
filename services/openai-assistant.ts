@@ -67,7 +67,7 @@ export const openaiAssistant = async (question: string) => {
 
   const lastMessageForRun = messages.data
     .filter(
-      (message) => message.run_id === run.id && message.role === "assistant",
+      (message) => message.run_id === run.id && message.role === "assistant"
     )
     .pop();
 
@@ -75,11 +75,13 @@ export const openaiAssistant = async (question: string) => {
     if (lastMessageForRun.content[0].type === "text") {
       console.log(lastMessageForRun.content[0].text.value);
       await openai.beta.threads.del(thread.id);
+      await openai.beta.assistants.del(assistant.id);
       return lastMessageForRun.content[0].text.value;
     }
   }
 
   await openai.beta.threads.del(thread.id);
+  await openai.beta.assistants.del(assistant.id);
 
   return "";
 };
