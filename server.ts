@@ -38,6 +38,8 @@ app.get("/api/properties", async (c: Context) => {
     no_of_parking_spaces_min?: string;
     no_of_parking_spaces_max?: string;
     ai_generated_description?: string;
+    sort_by?: string;
+    sort_order?: string;
   };
 
   if (!query.page) {
@@ -54,6 +56,14 @@ app.get("/api/properties", async (c: Context) => {
 
   if (!query.listing_type_id) {
     query.listing_type_id = "1";
+  }
+
+  if (!query.sort_by) {
+    query.sort_by = "created_at"; // Default sort field
+  }
+
+  if (!query.sort_order) {
+    query.sort_order = "DESC"; // Default sort order
   }
 
   const offset = (parseInt(query.page) - 1) * parseInt(query.page_size);
@@ -184,6 +194,18 @@ app.get("/api/properties", async (c: Context) => {
     addWhereCondition(`p.ai_generated_description IS NOT NULL`);
   }
 
+  // Validate and construct ORDER BY clause
+  let orderByClause = "";
+  const validSortFields = ["id", "created_at", "price"];
+  const validSortOrders = ["ASC", "DESC"];
+  
+  if (validSortFields.includes(query.sort_by) && 
+      validSortOrders.includes(query.sort_order.toUpperCase())) {
+    orderByClause = `ORDER BY l.${query.sort_by} ${query.sort_order.toUpperCase()}`;
+  } else {
+    orderByClause = "ORDER BY l.created_at DESC";
+  }
+
   console.log({ sqlWhereClause, sqlParams, nextParamCounter: paramCounter });
 
   const postgres = await client.queryObject({
@@ -253,7 +275,7 @@ app.get("/api/properties", async (c: Context) => {
               LEFT JOIN Listing_Area ar ON p.listing_area_id = ar.id
           WHERE
               ${sqlWhereClause}
-          ORDER BY l.created_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1};
+          ${orderByClause} LIMIT $${paramCounter} OFFSET $${paramCounter + 1};
     `,
   });
 
