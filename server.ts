@@ -458,18 +458,18 @@ app.get("/api/properties/:id", async (c: Context) => {
 
   const propertyData = property.rows[0] as any;
 
-  if (propertyData.ai_generated_description) {
-    // Reset the ai_generated_description to null if it exists
-    propertyData.ai_generated_description = null;
-  }
-
   if (query.regenerate_ai_description === "true") {
+    if (propertyData.ai_generated_description) {
+      // Reset the ai_generated_description to null if it exists
+      propertyData.ai_generated_description = null;
+    }
+
     const aiDescription = await openaiAssistant(JSON.stringify(propertyData));
 
     try {
       // Verify the aiDescription is valid JSON by parsing it
       JSON.parse(aiDescription.replace("```", "").replace("```json", ""));
-      
+
       propertyData.ai_generated_description = aiDescription;
 
       await client.queryObject({
@@ -478,8 +478,6 @@ app.get("/api/properties/:id", async (c: Context) => {
       });
     } catch (error) {
       console.error("Invalid AI description format:", error);
-      // Keep the existing description if new one is invalid
-      propertyData.ai_generated_description = propertyData.ai_generated_description || null;
     }
   }
 
