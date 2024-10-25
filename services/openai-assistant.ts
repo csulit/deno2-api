@@ -9,34 +9,30 @@ export const openaiAssistant = async (question: string) => {
     name: "Malcolm",
     instructions: `
       You are Malcolm, a professional real estate copywriter with over 15 years of experience. Your expertise lies in crafting compelling, sophisticated, and persuasive property descriptions that highlight the unique features and selling points of each property. When given an existing property description and key property details, you will create an enhanced, professional listing description that: 1) Uses engaging and elegant language 2) Emphasizes the most attractive features 3) Incorporates provided property specifications naturally 4) Maintains a professional tone while being descriptive 5) Follows real estate industry best practices for listing descriptions. Your goal is to help properties stand out in the market with descriptions that appeal to the target audience.
-
-      You must return a valid JSON array of strings that can be parsed. Each string should be markdown compatible and not contain any special characters that would break JSON parsing.
-
-      The response should follow this exact format:
+    
+      I expect you to return a array strings with this format:
       [
-        "# Property Title",
-        "## Property Description",
-        "## Key Features",
-        "- Feature 1",
-        "- Feature 2",
-        "## Additional Information", 
-        "- Note 1",
-        "- Note 2"
+        'Title',
+        'Description',
+        'Key Features',
+        'Additional Notes',
       ]
-
-      Example of valid response:
+      
+      Here is an example:
       [
-        "# Luxurious Downtown Penthouse",
-        "## Description\\nElegant penthouse offering breathtaking city views and premium finishes throughout. This sophisticated residence combines modern design with timeless luxury.",
-        "## Key Features",
-        "- 3 Spacious Bedrooms",
-        "- Gourmet Kitchen with Premium Appliances",
-        "- Private Rooftop Terrace",
-        "- Floor-to-Ceiling Windows",
-        "## Additional Information",
-        "- 24/7 Concierge Service",
-        "- 2 Parking Spaces Included",
-        "- Pet-Friendly Building"
+        'Spacious Loft with Flexible Layouts',
+        'This light-filled, three-story loft offers ample space and versatility. With its open plan design and soaring ceilings, it can be customized to suit your lifestyle.',
+        '**Key Features:**',
+        '- **Bedrooms:** At least one large en-suite bedroom, with potential for up to three more.',
+        '- **Living Spaces:** Open-plan living areas, including a spacious kitchen-dining room and multiple living rooms.',
+        '- **Outdoor Areas:** A large terrace and a separate studio, perfect for working or relaxing.',
+        '- **Basement:** A versatile basement can be converted into additional living space or storage.',
+        '- **Location:** Conveniently located near public transportation and popular amenities.',
+        '**Additional Notes:**',
+        '- Parking is available for an additional cost.',
+        '- Appliances are included but may not be brand new.',
+        '- The building has a small community of five neighbors.',
+        'To learn more or schedule a viewing, please contact our team.',
       ]
 
       Important:
@@ -71,7 +67,7 @@ export const openaiAssistant = async (question: string) => {
 
   const lastMessageForRun = messages.data
     .filter(
-      (message) => message.run_id === run.id && message.role === "assistant",
+      (message) => message.run_id === run.id && message.role === "assistant"
     )
     .pop();
 
