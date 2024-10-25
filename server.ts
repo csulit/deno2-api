@@ -319,6 +319,48 @@ app.get("/api/properties", async (c: Context) => {
   });
 });
 
+app.get("/api/properties/valuation", async (c: Context) => {
+  const data = c.req.query();
+
+  if (!data.property_type_id || !data.size_in_sqm) {
+    return c.json({ error: "Property type and size are required" }, 400);
+  }
+
+  const propertyTypeId = parseInt(data.property_type_id);
+  if (propertyTypeId < 1 || propertyTypeId > 4) {
+    return c.json({ error: "Invalid property type ID. Must be between 1 and 4" }, 400);
+  }
+
+  return c.json({ data: null });
+});
+
+app.get("/api/properties/cities", async (c: Context) => {
+  using client = await dbPool.connect();
+  const query = c.req.query();
+  const search = query.search || '';
+
+  const cities = await client.queryObject({
+    args: [`%${search}%`],
+    text: `
+      SELECT DISTINCT 
+        ct.id,
+        ct.city,
+        ct.listing_city_id,
+        rg.region as region_name,
+        rg.listing_region_id
+      FROM Listing_City ct
+      JOIN Listing_Region rg ON ct.listing_region_id = rg.id 
+      WHERE LOWER(ct.city) LIKE LOWER($1)
+      ORDER BY ct.city ASC
+      LIMIT 10
+    `
+  });
+
+  return c.json({ 
+    data: cities.rows
+  });
+});
+
 app.get("/api/properties/:id", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
