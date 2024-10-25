@@ -503,8 +503,6 @@ export async function listenQueue(kv: Deno.Kv) {
               }
             }
 
-            console.log(property);
-
             await transaction.commit();
             console.log("Transaction successfully committed for create");
             // Reset processed properties after successful commit
