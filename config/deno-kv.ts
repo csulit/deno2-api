@@ -466,42 +466,42 @@ export async function listenQueue(kv: Deno.Kv) {
               `SELECT * FROM Property WHERE ai_generated_description IS NULL ORDER BY created_at DESC LIMIT 10`
             );
 
-            // if (property.rowCount && property.rowCount > 0) {
-            //   // Process properties in parallel with rate limiting
-            //   const processProperty = async (row: unknown) => {
-            //     const propertyData = row as {
-            //       id: number;
-            //     };
+            if (property.rowCount && property.rowCount > 0) {
+              // Process properties in parallel with rate limiting
+              const processProperty = async (row: unknown) => {
+                const propertyData = row as {
+                  id: number;
+                };
 
-            //     const aiGeneratedDescription = await openaiAssistant(
-            //       JSON.stringify(row)
-            //     );
+                const aiGeneratedDescription = await openaiAssistant(
+                  JSON.stringify(row)
+                );
 
-            //     if (aiGeneratedDescription) {
-            //       processedProperty.push({
-            //         id: propertyData.id,
-            //         ai_generated_description: aiGeneratedDescription,
-            //       });
-            //     }
-            //   };
+                if (aiGeneratedDescription) {
+                  processedProperty.push({
+                    id: propertyData.id,
+                    ai_generated_description: aiGeneratedDescription,
+                  });
+                }
+              };
 
-            //   // Process 2 properties at a time with 5s delay between batches
-            //   for (let i = 0; i < property.rows.length; i += 2) {
-            //     const batch = property.rows.slice(i, i + 2);
-            //     await Promise.all(batch.map(processProperty));
-            //     if (i + 2 < property.rows.length) {
-            //       await new Promise((resolve) => setTimeout(resolve, 5000));
-            //     }
-            //   }
+              // Process 2 properties at a time with 5s delay between batches
+              for (let i = 0; i < property.rows.length; i += 2) {
+                const batch = property.rows.slice(i, i + 2);
+                await Promise.all(batch.map(processProperty));
+                if (i + 2 < property.rows.length) {
+                  await new Promise((resolve) => setTimeout(resolve, 5000));
+                }
+              }
 
-            //   // Update all processed properties in transaction
-            //   for (const prop of processedProperty) {
-            //     await transaction.queryObject({
-            //       args: [prop.ai_generated_description, prop.id],
-            //       text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
-            //     });
-            //   }
-            // }
+              // Update all processed properties in transaction
+              for (const prop of processedProperty) {
+                await transaction.queryObject({
+                  args: [prop.ai_generated_description, prop.id],
+                  text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
+                });
+              }
+            }
 
             console.log(property);
 
