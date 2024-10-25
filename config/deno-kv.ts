@@ -468,7 +468,10 @@ export async function listenQueue(kv: Deno.Kv) {
 
                 if (aiGeneratedDescription) {
                   await client_1.queryObject({
-                    args: [aiGeneratedDescription, propertyData.id],
+                    args: [
+                      JSON.stringify(aiGeneratedDescription),
+                      propertyData.id,
+                    ],
                     text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
                   });
                 }
