@@ -350,6 +350,8 @@ app.get("/api/properties/valuation", async (c: Context) => {
 
   const queryParams: (number)[] = [propertyTypeId, sizeInSqm];
   let cityClause = '';
+  let propertyFeaturesClause = '';
+  let paramCounter = 3;
   
   if (data.city_id) {
     const cityId = parseInt(data.city_id);
@@ -357,7 +359,41 @@ app.get("/api/properties/valuation", async (c: Context) => {
       return c.json({ error: "Invalid city ID" }, 400);
     }
     queryParams.push(cityId);
-    cityClause = 'AND p.listing_city_id = $3';
+    cityClause = `AND p.listing_city_id = $${paramCounter}`;
+    paramCounter++;
+  }
+
+  // Only allow bedroom, bathroom, and parking filters for residential properties
+  if (propertyTypeId === 1 || propertyTypeId === 2) {
+    if (data.no_of_bedrooms) {
+      const bedrooms = parseInt(data.no_of_bedrooms);
+      if (isNaN(bedrooms) || bedrooms < 0) {
+        return c.json({ error: "Invalid number of bedrooms" }, 400);
+      }
+      queryParams.push(bedrooms);
+      propertyFeaturesClause += `AND p.no_of_bedrooms = $${paramCounter} `;
+      paramCounter++;
+    }
+
+    if (data.no_of_bathrooms) {
+      const bathrooms = parseInt(data.no_of_bathrooms);
+      if (isNaN(bathrooms) || bathrooms < 0) {
+        return c.json({ error: "Invalid number of bathrooms" }, 400);
+      }
+      queryParams.push(bathrooms);
+      propertyFeaturesClause += `AND p.no_of_bathrooms = $${paramCounter} `;
+      paramCounter++;
+    }
+
+    if (data.no_of_parking_spaces) {
+      const parkingSpaces = parseInt(data.no_of_parking_spaces);
+      if (isNaN(parkingSpaces) || parkingSpaces < 0) {
+        return c.json({ error: "Invalid number of parking spaces" }, 400);
+      }
+      queryParams.push(parkingSpaces);
+      propertyFeaturesClause += `AND p.no_of_parking_spaces = $${paramCounter} `;
+      paramCounter++;
+    }
   }
 
   interface PropertyStats {
@@ -378,6 +414,7 @@ app.get("/api/properties/valuation", async (c: Context) => {
         WHERE 
           p.property_type_id = $1
           ${cityClause}
+          ${propertyFeaturesClause}
           AND CASE 
             WHEN p.property_type_id IN (1, 3) THEN p.building_size BETWEEN $2 * 0.8 AND $2 * 1.2
             ELSE p.lot_size BETWEEN $2 * 0.8 AND $2 * 1.2
