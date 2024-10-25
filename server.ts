@@ -247,7 +247,7 @@ app.get("/api/properties", async (c: Context) => {
               LEFT JOIN Listing_Area ar ON p.listing_area_id = ar.id
           WHERE
               ${sqlWhereClause}
-          ORDER BY l.id DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1};
+          ORDER BY l.created_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1};
     `,
   });
 
