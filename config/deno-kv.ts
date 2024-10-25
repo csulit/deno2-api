@@ -467,7 +467,11 @@ export async function listenQueue(kv: Deno.Kv) {
                 );
 
                 try {
-                  JSON.parse(aiGeneratedDescription.replace("```", "```json"));
+                  JSON.parse(
+                    aiGeneratedDescription
+                      .replace("```", "")
+                      .replace("```json", "")
+                  );
                 } catch {
                   throw Error("Invalid AI description format");
                 }
