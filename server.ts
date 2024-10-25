@@ -463,7 +463,7 @@ app.get("/api/properties/:id", async (c: Context) => {
 
     try {
       // Verify the aiDescription is valid JSON by parsing it
-      JSON.parse(aiDescription);
+      JSON.parse(aiDescription.replace("```", "```json"));
       
       propertyData.ai_generated_description = aiDescription;
 
