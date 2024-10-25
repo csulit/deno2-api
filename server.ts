@@ -458,6 +458,11 @@ app.get("/api/properties/:id", async (c: Context) => {
 
   const propertyData = property.rows[0] as any;
 
+  if (propertyData.ai_generated_description) {
+    // Reset the ai_generated_description to null if it exists
+    propertyData.ai_generated_description = null;
+  }
+
   if (query.regenerate_ai_description === "true") {
     const aiDescription = await openaiAssistant(JSON.stringify(propertyData));
 
