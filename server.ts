@@ -464,7 +464,7 @@ app.get("/api/properties/:id", async (c: Context) => {
     propertyData.ai_generated_description = aiDescription;
 
     await client.queryObject({
-      args: [propertyData.id, aiDescription],
+      args: [propertyData.id, JSON.stringify(aiDescription)],
       text: `UPDATE Property SET ai_generated_description = $2 WHERE id = $1`,
     });
   }
