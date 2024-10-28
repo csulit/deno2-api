@@ -561,32 +561,11 @@ app.get("/api/properties/:id", async (c: Context) => {
     `,
   });
 
-  const propertyData = property.rows[0] as any;
-
-  if (query.regenerate_ai_description === "true") {
-    if (propertyData.ai_generated_description) {
-      // Reset the ai_generated_description to null if it exists
-      propertyData.ai_generated_description = null;
-    }
-
-    const aiGeneratedDescription = await openaiAssistant(JSON.stringify(propertyData));
-
-    try {
-      // Verify the aiDescription is valid JSON by parsing it
-      JSON.parse(aiGeneratedDescription.includes("```json") ? aiGeneratedDescription.replace("```json", "").replace("```", "") : aiGeneratedDescription);
-
-      propertyData.ai_generated_description = aiGeneratedDescription;
-
-      await client.queryObject({
-        args: [propertyData.id, JSON.stringify(aiGeneratedDescription)],
-        text: `UPDATE Property SET ai_generated_description = $2 WHERE id = $1`,
-      });
-    } catch (error) {
-      console.error("Invalid AI description format:", error);
-    }
+  if (property.rowCount === 0) {
+    return c.json({ data: null });
   }
 
-  return c.json({ data: propertyData });
+  return c.json({ data: property.rows[0] });
 });
 
 app.post("/", async (c: Context) => {
