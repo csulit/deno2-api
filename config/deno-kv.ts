@@ -210,15 +210,21 @@ export async function listenQueue(kv: Deno.Kv) {
                 `);
 
                 if (region.rowCount === 0) {
-                  const lastRegionId = await client2.queryObject<{id: number}>(`
+                  const lastRegionId = await client2.queryObject<
+                    { id: number }
+                  >(`
                     SELECT id FROM Listing_Region ORDER BY id DESC LIMIT 1
                   `);
 
-                  const newRegionId = lastRegionId.rows[0].id + 
+                  const newRegionId = lastRegionId.rows[0].id +
                     Math.floor(100000 + Math.random() * 900000);
 
                   region = await client2.queryObject({
-                    args: [newRegionId, rawProperty.region, rawProperty.listing_region_id],
+                    args: [
+                      newRegionId,
+                      rawProperty.region,
+                      rawProperty.listing_region_id,
+                    ],
                     text: `
                       INSERT INTO Listing_Region (id, region, listing_region_id)
                       VALUES ($1, $2, $3)
@@ -238,11 +244,11 @@ export async function listenQueue(kv: Deno.Kv) {
                     listing_region_id: number;
                   };
 
-                  const lastCityId = await client2.queryObject<{id: number}>(`
+                  const lastCityId = await client2.queryObject<{ id: number }>(`
                     SELECT id FROM Listing_City ORDER BY id DESC LIMIT 1
                   `);
 
-                  const newCityId = lastCityId.rows[0].id + 
+                  const newCityId = lastCityId.rows[0].id +
                     Math.floor(100000 + Math.random() * 900000);
 
                   city = await client2.queryObject({
@@ -267,11 +273,11 @@ export async function listenQueue(kv: Deno.Kv) {
                 `);
 
                 if (area.rowCount === 0 && rawProperty.listing_area_id) {
-                  const lastAreaId = await client2.queryObject<{id: number}>(`
+                  const lastAreaId = await client2.queryObject<{ id: number }>(`
                     SELECT id FROM Listing_Area ORDER BY id DESC LIMIT 1
                   `);
 
-                  const newAreaId = lastAreaId.rows[0].id + 
+                  const newAreaId = lastAreaId.rows[0].id +
                     Math.floor(100000 + Math.random() * 900000);
 
                   area = await client2.queryObject({
@@ -321,6 +327,14 @@ export async function listenQueue(kv: Deno.Kv) {
                     .id
                     .toString();
               } catch (error) {
+                await client2.queryObject({
+                  args: [rawProperty.id],
+                  text: `
+                      UPDATE lamudi_raw_data
+                      SET is_process = TRUE
+                      WHERE id = $1
+                    `,
+                });
                 throw error;
               }
             }
