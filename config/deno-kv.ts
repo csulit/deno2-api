@@ -203,11 +203,14 @@ export async function listenQueue(kv: Deno.Kv) {
 
             for (const rawProperty of rawProperties.rows) {
               try {
-                let region = await client2.queryObject(`
-                  SELECT id, listing_region_id 
-                  FROM Listing_Region 
-                  WHERE listing_region_id = '${rawProperty.listing_region_id}'
-                `);
+                let region = await client2.queryObject({
+                  args: [rawProperty.listing_region_id, rawProperty.region],
+                  text: `
+                    SELECT id, listing_region_id 
+                    FROM Listing_Region 
+                    WHERE listing_region_id = $1 OR region = $2
+                  `,
+                });
 
                 if (region.rowCount === 0) {
                   const lastRegionId = await client2.queryObject<
@@ -233,11 +236,14 @@ export async function listenQueue(kv: Deno.Kv) {
                   });
                 }
 
-                let city = await client2.queryObject(`
-                  SELECT id, listing_city_id
-                  FROM Listing_City
-                  WHERE listing_city_id = '${rawProperty.listing_city_id}'
-                `);
+                let city = await client2.queryObject({
+                  args: [rawProperty.listing_city_id, rawProperty.city],
+                  text: `
+                    SELECT id, listing_city_id
+                    FROM Listing_City
+                    WHERE listing_city_id = $1 OR city = $2
+                  `,
+                });
 
                 if (city.rowCount === 0) {
                   const createdRegion = region.rows[0] as {
@@ -266,11 +272,14 @@ export async function listenQueue(kv: Deno.Kv) {
                   });
                 }
 
-                let area = await client2.queryObject(`
-                  SELECT id
-                  FROM Listing_Area
-                  WHERE listing_area_id = '${rawProperty.listing_area_id}'
-                `);
+                let area = await client2.queryObject({
+                  args: [rawProperty.listing_area_id, rawProperty.listing_area],
+                  text: `
+                    SELECT id
+                    FROM Listing_Area
+                    WHERE listing_area_id = $1 OR area = $2
+                  `,
+                });
 
                 if (area.rowCount === 0 && rawProperty.listing_area_id) {
                   const lastAreaId = await client2.queryObject<{ id: number }>(`
