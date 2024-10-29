@@ -37,6 +37,7 @@ app.get("/api/properties", async (c: Context) => {
     ai_generated_description?: string;
     sort_by?: string;
     sort_order?: string;
+    search?: string;
   };
 
   if (!query.page) {
@@ -98,6 +99,14 @@ app.get("/api/properties", async (c: Context) => {
     sqlParams.push(...params);
     paramCounter += params.length;
   };
+
+  // Add text search condition if search query is provided
+  if (query.search) {
+    addWhereCondition(
+      `to_tsvector('english', l.title || ' ' || l.description) @@ plainto_tsquery($${paramCounter})`,
+      query.search
+    );
+  }
 
   // Add bounding box condition if all coordinates are provided
   if (boundingBoxCoords.every((coord) => coord !== null)) {
