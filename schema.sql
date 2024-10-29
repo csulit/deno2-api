@@ -139,6 +139,8 @@ CREATE INDEX idx_property_property_features ON Property USING GIN (property_feat
 CREATE INDEX idx_property_indoor_features ON Property USING GIN (indoor_features);
 CREATE INDEX idx_property_outdoor_features ON Property USING GIN (outdoor_features);
 CREATE INDEX idx_property_ai_generated_basic_features ON Property USING GIN (ai_generated_basic_features);
+CREATE INDEX idx_title_trgm ON Listing USING gin (title gin_trgm_ops);
+CREATE INDEX idx_description_trgm ON Listing USING gin (description gin_trgm_ops);
 
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -229,6 +231,26 @@ AFTER UPDATE ON Lamudi_raw_data
 FOR EACH ROW
 WHEN (NEW.is_process = TRUE)
 EXECUTE FUNCTION delete_processed_rows();
+
+CREATE OR REPLACE FUNCTION listd_dev.public.clean_special_characters(text)
+RETURNS text AS $$
+BEGIN
+    RETURN REGEXP_REPLACE($1, '[^a-zA-Z0-9 ]', '', 'g');
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION listd_dev.public.clean_property_description()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.ai_generated_description = listd_dev.public.clean_special_characters(NEW.ai_generated_description::text)::jsonb;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER clean_description_trigger
+BEFORE INSERT OR UPDATE ON listd_dev.public.property
+FOR EACH ROW
+EXECUTE FUNCTION listd_dev.public.clean_property_description();
 
 EXPLAIN ANALYZE
 WITH params AS (
