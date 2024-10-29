@@ -395,7 +395,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       JSON.stringify(rawProperty.property_features),
                       JSON.stringify(rawProperty.indoor_features),
                       JSON.stringify(rawProperty.outdoor_features),
-                      rawProperty.property_type_id,
+                      rawProperty.property_type_id ?? 5, // Default to "Others" property type if null/undefined
                       rawProperty.address ?? "-",
                       parseInt(rawProperty.listing_region_id),
                       parseInt(rawProperty.listing_city_id),
