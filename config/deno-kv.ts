@@ -323,6 +323,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       ) RETURNING id`,
                   });
                 } catch (error) {
+                  await transaction.rollback();
                   throw error;
                 }
 
@@ -351,6 +352,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       `,
                     });
                   } catch (error) {
+                    await transaction.rollback();
                     throw error;
                   }
                 }
@@ -359,8 +361,16 @@ export async function listenQueue(kv: Deno.Kv) {
 
             await transaction.commit();
           } catch (error) {
-            if (transaction) await transaction.rollback();
-            console.error(error);
+            if (transaction) {
+              try {
+                await transaction.rollback();
+              } catch (rollbackError) {
+                console.error("Error during rollback:", rollbackError);
+              }
+            }
+            console.error("Transaction error:", error);
+          } finally {
+            client.release();
           }
         }
         break;
