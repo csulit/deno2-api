@@ -112,7 +112,7 @@ export async function listenQueue(kv: Deno.Kv) {
       case "CREATE_LISTING_FROM_RAW_LAMUDI_DATA":
         {
           let transaction: Transaction | null = null;
-          using client = await dbPool.connect();
+          const client = await dbPool.connect();
           try {
             transaction = client.createTransaction(
               "create_listing_from_raw_lamudi_data",
