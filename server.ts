@@ -104,7 +104,7 @@ app.get("/api/properties", async (c: Context) => {
   if (query.search) {
     addWhereCondition(
       `to_tsvector('english', l.title || ' ' || l.description) @@ plainto_tsquery($${paramCounter})`,
-      query.search
+      query.search,
     );
   }
 
