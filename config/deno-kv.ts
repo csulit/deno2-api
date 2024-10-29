@@ -395,7 +395,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       JSON.stringify(rawProperty.property_features),
                       JSON.stringify(rawProperty.indoor_features),
                       JSON.stringify(rawProperty.outdoor_features),
-                      parseInt(rawProperty.property_type_id.toString()),
+                      rawProperty.property_type_id,
                       rawProperty.address ?? "-",
                       parseInt(rawProperty.listing_region_id),
                       parseInt(rawProperty.listing_city_id),
