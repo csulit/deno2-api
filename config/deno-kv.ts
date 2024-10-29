@@ -382,11 +382,12 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.price,
                       rawProperty.price_formatted,
                       rawProperty.full_url,
+                      rawProperty.raw_title
                     ],
                     text: `
                       UPDATE Listing 
                       SET price = $1, price_formatted = $2
-                      WHERE url = $3
+                      WHERE url = $3 OR title = $4
                     `,
                   });
 
@@ -403,6 +404,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.product_owner_name,
                       rawProperty.project_name,
                       rawProperty.full_url,
+                      rawProperty.raw_title
                     ],
                     text: `
                       UPDATE Property p
@@ -411,7 +413,7 @@ export async function listenQueue(kv: Deno.Kv) {
                           product_owner_name = $3,
                           project_name = $4
                       FROM Listing l 
-                      WHERE l.property_id = p.id AND l.url = $5
+                      WHERE l.property_id = p.id AND l.url = $5 OR l.title = $6
                     `,
                   });
 
