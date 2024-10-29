@@ -574,7 +574,7 @@ app.get("/api/properties/:id", async (c: Context) => {
 
 app.post("/", async (c: Context) => {
   const data = await c.req.json();
-  console.log(JSON.stringify(data));
+  console.info("Received message:", JSON.stringify(data, null, 2));
   await sendMessage({ kv, data, options: { delay: 5000 } });
   return c.text("Hono!");
 });
