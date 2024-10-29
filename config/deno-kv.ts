@@ -141,7 +141,7 @@ export async function listenQueue(kv: Deno.Kv) {
               `,
             });
 
-            console.log(
+            console.info(
               `Processing ${rawPropertiesCount.rows[0].count} raw properties`,
             );
 
@@ -305,7 +305,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   });
 
                   if (updateResult.rowCount === 1) {
-                    console.log("1 record updated in lamudi_raw_data");
+                    console.info("1 record updated in lamudi_raw_data");
                   }
 
                   const updateListingResult = await transaction.queryObject({
@@ -322,7 +322,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   });
 
                   if (updateListingResult.rowCount === 1) {
-                    console.log(
+                    console.info(
                       "Listing updated with new price and price_formatted",
                     );
                   }
@@ -347,7 +347,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   });
 
                   if (updatePropertyResult.rowCount === 1) {
-                    console.log(
+                    console.info(
                       "Property updated with new images, agent_name, product_owner_name, and project_name",
                     );
                   }
@@ -433,7 +433,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 }
 
                 if (property.rowCount && property.rowCount > 0) {
-                  console.log(
+                  console.info(
                     "Newly created property ID:",
                     property.rows[0].id,
                   );
@@ -476,7 +476,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     });
 
                     if (newListing.rowCount && newListing.rowCount > 0) {
-                      console.log(
+                      console.info(
                         "Newly created listing ID:",
                         newListing.rows[0].id,
                       );
@@ -492,7 +492,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     });
 
                     if (updateResult.rowCount === 1) {
-                      console.log("1 record updated in lamudi_raw_data");
+                      console.info("1 record updated in lamudi_raw_data");
                     }
                   } catch (error) {
                     throw error;
@@ -502,7 +502,7 @@ export async function listenQueue(kv: Deno.Kv) {
             }
 
             await transaction.commit();
-            console.log("Transaction successfully committed");
+            console.info("Transaction successfully committed");
           } catch (error) {
             if (transaction) {
               try {
