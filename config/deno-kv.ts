@@ -312,7 +312,7 @@ export async function listenQueue(kv: Deno.Kv) {
               for (const rawProperty of rawProperties.rows) {
                 const images = rawProperty.images.map((image) => image.src);
 
-                const listing = await transaction.queryObject<Listing>({
+                const listing = await client2.queryObject<Listing>({
                   args: [rawProperty.full_url, rawProperty.raw_title],
                   text: `
                     SELECT url
