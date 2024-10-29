@@ -365,26 +365,11 @@ export async function listenQueue(kv: Deno.Kv) {
                 if (listing.rowCount && listing.rowCount > 0) {
                   console.info("Listing already exists");
 
-                  const updateResult = await transaction.queryObject({
-                    args: [rawProperty.id],
-                    text: `
-                      UPDATE lamudi_raw_data
-                      SET is_process = TRUE
-                      WHERE id = $1
-                    `,
-                  });
-
-                  if (updateResult.rowCount === 1) {
-                    console.info("1 record updated in lamudi_raw_data");
-                  }
-
-                  
-
                   const updateListingResult = await transaction.queryObject({
                     args: [
                       rawProperty.price,
                       rawProperty.price_formatted,
-                      listing.rows[0].id
+                      listing.rows[0].id,
                     ],
                     text: `
                       UPDATE Listing 
@@ -405,7 +390,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.agent_name,
                       rawProperty.product_owner_name,
                       rawProperty.project_name,
-                      listing.rows[0].property_id
+                      listing.rows[0].property_id,
                     ],
                     text: `
                       UPDATE Property p
@@ -422,6 +407,19 @@ export async function listenQueue(kv: Deno.Kv) {
                     console.info(
                       "Property updated with new images, agent_name, product_owner_name, and project_name",
                     );
+                  }
+
+                  const updateResult = await transaction.queryObject({
+                    args: [rawProperty.id],
+                    text: `
+                      UPDATE lamudi_raw_data
+                      SET is_process = TRUE
+                      WHERE id = $1
+                    `,
+                  });
+
+                  if (updateResult.rowCount === 1) {
+                    console.info("1 record updated in lamudi_raw_data");
                   }
 
                   continue;
