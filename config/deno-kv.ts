@@ -229,6 +229,13 @@ export async function listenQueue(kv: Deno.Kv) {
                          RETURNING id`,
                 });
               }
+
+              rawProperty.listing_region_id = (region.rows[0] as { id: number })
+                .id.toString();
+              rawProperty.listing_city_id = (city.rows[0] as { id: number })
+                .id.toString();
+              rawProperty.listing_area_id = (area.rows[0] as { id: number })
+                .id.toString();
             }
 
             if (rawProperties.rowCount && rawProperties.rowCount > 0) {
