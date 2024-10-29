@@ -355,9 +355,10 @@ export async function listenQueue(kv: Deno.Kv) {
                 const listing = await client2.queryObject<Listing>({
                   args: [rawProperty.full_url, rawProperty.raw_title],
                   text: `
-                    SELECT url
-                    FROM Listing
-                    WHERE url = $1 OR title = $2
+                    SELECT l.url, p.id as property_id 
+                    FROM Listing l
+                    JOIN Property p ON p.id = l.property_id
+                    WHERE l.url = $1 OR l.title = $2
                   `,
                 });
 
@@ -377,17 +378,18 @@ export async function listenQueue(kv: Deno.Kv) {
                     console.info("1 record updated in lamudi_raw_data");
                   }
 
+                  
+
                   const updateListingResult = await transaction.queryObject({
                     args: [
                       rawProperty.price,
                       rawProperty.price_formatted,
-                      rawProperty.full_url,
-                      rawProperty.raw_title
+                      listing.rows[0].id
                     ],
                     text: `
                       UPDATE Listing 
                       SET price = $1, price_formatted = $2
-                      WHERE url = $3 OR title = $4
+                      WHERE id = $3
                     `,
                   });
 
@@ -403,8 +405,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.agent_name,
                       rawProperty.product_owner_name,
                       rawProperty.project_name,
-                      rawProperty.full_url,
-                      rawProperty.raw_title
+                      listing.rows[0].property_id
                     ],
                     text: `
                       UPDATE Property p
@@ -413,7 +414,7 @@ export async function listenQueue(kv: Deno.Kv) {
                           product_owner_name = $3,
                           project_name = $4
                       FROM Listing l 
-                      WHERE l.property_id = p.id AND l.url = $5 OR l.title = $6
+                      WHERE id = $5
                     `,
                   });
 
