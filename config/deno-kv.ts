@@ -452,6 +452,14 @@ export async function listenQueue(kv: Deno.Kv) {
                     `,
                   });
                 } catch (error) {
+                  await client2.queryObject({
+                    args: [rawProperty.id],
+                    text: `
+                      UPDATE lamudi_raw_data
+                      SET is_process = TRUE
+                      WHERE id = $1
+                    `,
+                  });
                   throw error;
                 }
 
