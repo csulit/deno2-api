@@ -197,7 +197,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   AND json_data->'dataLayer'->'location'->>'region' IS NOT NULL
                   AND json_data->'dataLayer'->'location'->>'city' IS NOT NULL
                   AND json_data->'dataLayer'->'attributes'->>'listing_area' IS NOT NULL
-              LIMIT 30
+              LIMIT 50
               `,
             );
 
@@ -218,8 +218,6 @@ export async function listenQueue(kv: Deno.Kv) {
                       RETURNING id, listing_region_id
                     `,
                   });
-                  // Add delay after creating region
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
 
                 let city = await client2.queryObject(`
@@ -245,8 +243,6 @@ export async function listenQueue(kv: Deno.Kv) {
                       RETURNING id, listing_city_id
                     `,
                   });
-                  // Add delay after creating city
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
 
                 let area = await client2.queryObject(`
@@ -267,8 +263,6 @@ export async function listenQueue(kv: Deno.Kv) {
                       RETURNING id
                     `,
                   });
-                  // Add delay after creating area
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
 
                 // Verify records exist after creation
