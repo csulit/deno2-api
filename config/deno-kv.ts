@@ -355,7 +355,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 const listing = await client2.queryObject<Listing>({
                   args: [rawProperty.full_url, rawProperty.raw_title],
                   text: `
-                    SELECT l.url, p.id as property_id 
+                    SELECT l.url, l.id, p.id as property_id 
                     FROM Listing l
                     JOIN Property p ON p.id = l.property_id
                     WHERE l.url = $1 OR l.title = $2
@@ -399,7 +399,7 @@ export async function listenQueue(kv: Deno.Kv) {
                           product_owner_name = $3,
                           project_name = $4
                       FROM Listing l 
-                      WHERE id = $5
+                      WHERE p.id = $5
                     `,
                   });
 
