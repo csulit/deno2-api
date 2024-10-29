@@ -203,26 +203,14 @@ export async function listenQueue(kv: Deno.Kv) {
 
             for (const rawProperty of rawProperties.rows) {
               try {
-                let region = await transaction.queryObject(`
+                let region = await client2.queryObject(`
                   SELECT id, listing_region_id 
                   FROM Listing_Region 
                   WHERE listing_region_id = '${rawProperty.listing_region_id}'
-              `);
-
-                let city = await transaction.queryObject(`
-                  SELECT id, listing_city_id
-                  FROM Listing_City
-                  WHERE listing_city_id = '${rawProperty.listing_city_id}'
-              `);
-
-                let area = await transaction.queryObject(`
-                  SELECT id
-                  FROM Listing_Area
-                  WHERE listing_area_id = '${rawProperty.listing_area_id}'
-              `);
+                `);
 
                 if (region.rowCount === 0) {
-                  region = await transaction.queryObject({
+                  region = await client2.queryObject({
                     args: [rawProperty.region, rawProperty.listing_region_id],
                     text: `
                       INSERT INTO Listing_Region (region, listing_region_id)
@@ -230,14 +218,22 @@ export async function listenQueue(kv: Deno.Kv) {
                       RETURNING id, listing_region_id
                     `,
                   });
+                  // Add delay after creating region
+                  await new Promise(resolve => setTimeout(resolve, 1000));
                 }
+
+                let city = await client2.queryObject(`
+                  SELECT id, listing_city_id
+                  FROM Listing_City
+                  WHERE listing_city_id = '${rawProperty.listing_city_id}'
+                `);
 
                 if (city.rowCount === 0) {
                   const createdRegion = region.rows[0] as {
                     listing_region_id: number;
                   };
 
-                  city = await transaction.queryObject({
+                  city = await client2.queryObject({
                     args: [
                       rawProperty.city,
                       rawProperty.listing_city_id,
@@ -249,10 +245,18 @@ export async function listenQueue(kv: Deno.Kv) {
                       RETURNING id, listing_city_id
                     `,
                   });
+                  // Add delay after creating city
+                  await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
+                let area = await client2.queryObject(`
+                  SELECT id
+                  FROM Listing_Area
+                  WHERE listing_area_id = '${rawProperty.listing_area_id}'
+                `);
+
                 if (area.rowCount === 0 && rawProperty.listing_area_id) {
-                  area = await transaction.queryObject({
+                  area = await client2.queryObject({
                     args: [
                       rawProperty.listing_area,
                       rawProperty.listing_area_id,
@@ -263,15 +267,35 @@ export async function listenQueue(kv: Deno.Kv) {
                       RETURNING id
                     `,
                   });
+                  // Add delay after creating area
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+
+                // Verify records exist after creation
+                const verifyRegion = await client2.queryObject(`
+                  SELECT id FROM Listing_Region 
+                  WHERE listing_region_id = '${rawProperty.listing_region_id}'
+                `);
+                const verifyCity = await client2.queryObject(`
+                  SELECT id FROM Listing_City
+                  WHERE listing_city_id = '${rawProperty.listing_city_id}'
+                `);
+                const verifyArea = await client2.queryObject(`
+                  SELECT id FROM Listing_Area
+                  WHERE listing_area_id = '${rawProperty.listing_area_id}'
+                `);
+
+                if (!verifyRegion.rowCount || !verifyCity.rowCount || !verifyArea.rowCount) {
+                  throw new Error('Failed to verify created records');
                 }
 
                 rawProperty.listing_region_id =
-                  (region.rows[0] as { id: number }).id
+                  (verifyRegion.rows[0] as { id: number }).id
                     .toString();
-                rawProperty.listing_city_id = (city.rows[0] as { id: number })
+                rawProperty.listing_city_id = (verifyCity.rows[0] as { id: number })
                   .id
                   .toString();
-                rawProperty.listing_area_id = (area.rows[0] as { id: number })
+                rawProperty.listing_area_id = (verifyArea.rows[0] as { id: number })
                   .id
                   .toString();
               } catch (error) {
