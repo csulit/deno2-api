@@ -168,6 +168,7 @@ CREATE INDEX idx_property_outdoor_features ON Property USING GIN (outdoor_featur
 CREATE INDEX idx_property_ai_generated_basic_features ON Property USING GIN (ai_generated_basic_features);
 CREATE INDEX idx_title_trgm ON Listing USING gin (title gin_trgm_ops);
 CREATE INDEX idx_description_trgm ON Listing USING gin (description gin_trgm_ops);
+CREATE INDEX idx_title_desc_tsvector ON listings USING gin (to_tsvector('english', title || ' ' || description));
 
 -- Trigger function to auto-update timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()
