@@ -210,11 +210,18 @@ export async function listenQueue(kv: Deno.Kv) {
                 `);
 
                 if (region.rowCount === 0) {
+                  const lastRegionId = await client2.queryObject<{id: number}>(`
+                    SELECT id FROM Listing_Region ORDER BY id DESC LIMIT 1
+                  `);
+
+                  const newRegionId = lastRegionId.rows[0].id + 
+                    Math.floor(100000 + Math.random() * 900000);
+
                   region = await client2.queryObject({
-                    args: [rawProperty.region, rawProperty.listing_region_id],
+                    args: [newRegionId, rawProperty.region, rawProperty.listing_region_id],
                     text: `
-                      INSERT INTO Listing_Region (region, listing_region_id)
-                      VALUES ($1, $2)
+                      INSERT INTO Listing_Region (id, region, listing_region_id)
+                      VALUES ($1, $2, $3)
                       RETURNING id, listing_region_id
                     `,
                   });
@@ -231,15 +238,23 @@ export async function listenQueue(kv: Deno.Kv) {
                     listing_region_id: number;
                   };
 
+                  const lastCityId = await client2.queryObject<{id: number}>(`
+                    SELECT id FROM Listing_City ORDER BY id DESC LIMIT 1
+                  `);
+
+                  const newCityId = lastCityId.rows[0].id + 
+                    Math.floor(100000 + Math.random() * 900000);
+
                   city = await client2.queryObject({
                     args: [
+                      newCityId,
                       rawProperty.city,
                       rawProperty.listing_city_id,
                       createdRegion.listing_region_id,
                     ],
                     text: `
-                      INSERT INTO Listing_City (city, listing_city_id, listing_region_id)
-                      VALUES ($1, $2, $3)
+                      INSERT INTO Listing_City (id, city, listing_city_id, listing_region_id)
+                      VALUES ($1, $2, $3, $4)
                       RETURNING id, listing_city_id
                     `,
                   });
@@ -252,14 +267,22 @@ export async function listenQueue(kv: Deno.Kv) {
                 `);
 
                 if (area.rowCount === 0 && rawProperty.listing_area_id) {
+                  const lastAreaId = await client2.queryObject<{id: number}>(`
+                    SELECT id FROM Listing_Area ORDER BY id DESC LIMIT 1
+                  `);
+
+                  const newAreaId = lastAreaId.rows[0].id + 
+                    Math.floor(100000 + Math.random() * 900000);
+
                   area = await client2.queryObject({
                     args: [
+                      newAreaId,
                       rawProperty.listing_area,
                       rawProperty.listing_area_id,
                     ],
                     text: `
-                      INSERT INTO Listing_Area (area, listing_area_id)
-                      VALUES ($1, $2)
+                      INSERT INTO Listing_Area (id, area, listing_area_id)
+                      VALUES ($1, $2, $3)
                       RETURNING id
                     `,
                   });
