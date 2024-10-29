@@ -134,8 +134,11 @@ export async function listenQueue(kv: Deno.Kv) {
             const rawPropertiesCount = await transaction.queryObject<
               { count: number }
             >({
-              text:
-                `SELECT COUNT(*) FROM lamudi_raw_data WHERE is_process = FALSE`,
+              text: `
+                SELECT COUNT(*)
+                FROM lamudi_raw_data
+                WHERE is_process = FALSE
+              `,
             });
 
             console.log(
@@ -144,86 +147,88 @@ export async function listenQueue(kv: Deno.Kv) {
 
             const rawProperties = await transaction.queryObject<RawLamudiData>(
               `
-      SELECT
-          id, json_data,
-          json_data->'dataLayer'->>'title' AS raw_title,
-          CASE
-              WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'Condominium' THEN 1
-              WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'House' THEN 2
-              WHEN json_data->'dataLayer'->'attributes'->>'subcategory' = 'Warehouse' THEN 3
-              WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'Land' THEN 4
-          END AS property_type_id,
-          CASE
-              WHEN json_data->'dataLayer'->'attributes'->>'offer_type' = 'Buy' THEN 1
-              WHEN json_data->'dataLayer'->'attributes'->>'offer_type' = 'Rent' THEN 2
-          END AS offer_type_id,
-          json_data->'dataLayer'->>'agent_name' AS agent_name,
-          json_data->'dataLayer'->'attributes'->>'product_owner_name' AS product_owner_name,
-          json_data->'dataLayer'->'attributes'->>'listing_region_id' AS listing_region_id,
-          json_data->'dataLayer'->'location'->>'region' AS region,
-          json_data->'dataLayer'->'attributes'->>'listing_city_id' AS listing_city_id,
-          json_data->'dataLayer'->'location'->>'city' AS city,
-          json_data->'dataLayer'->'attributes'->>'listing_area' AS listing_area,
-          json_data->'dataLayer'->'attributes'->>'listing_area_id' AS listing_area_id,
-          COALESCE((json_data->'dataLayer'->'location'->>'rooms_total')::INTEGER, 0) AS rooms_total,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'floor_size')::DOUBLE PRECISION, 0) AS floor_size,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'lot_size')::DOUBLE PRECISION, 0) AS lot_size,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'land_size')::DOUBLE PRECISION, 0) AS land_size,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'building_size')::DOUBLE PRECISION, 0) AS building_size,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'bedrooms')::INTEGER, 0) AS no_of_bedrooms,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'bathrooms')::INTEGER, 0) AS no_of_bathrooms,
-          COALESCE((json_data->'dataLayer'->'attributes'->>'car_spaces')::INTEGER, 0) AS no_of_parking_spaces,
-          (json_data->'dataLayer'->'attributes'->>'location_longitude')::DOUBLE PRECISION AS longitude,
-          (json_data->'dataLayer'->'attributes'->>'location_latitude')::DOUBLE PRECISION AS latitude,
-          (json_data->'dataLayer'->'attributes'->>'year_built')::INTEGER AS year_built,
-          json_data->'dataLayer'->'attributes'->>'image_url' AS primary_image_url,
-          (json_data->'dataLayer'->'attributes'->>'indoor_features')::jsonb AS indoor_features,
-          (json_data->'dataLayer'->'attributes'->>'outdoor_features')::jsonb AS outdoor_features,
-          (json_data->'dataLayer'->'attributes'->>'other_features')::jsonb AS property_features,
-          json_data->'dataLayer'->'attributes'->>'listing_address' AS address,
-          json_data->'dataLayer'->'attributes'->>'project_name' AS project_name,
-          json_data->'dataLayer'->'attributes'->>'price' AS price,
-          json_data->'dataLayer'->'attributes'->>'price_formatted' AS price_formatted,
-          json_data->'dataLayer'->'description'->>'text' AS description,
-          CONCAT('https://lamudi.com.ph/', json_data->'dataLayer'->'attributes'->>'urlkey_details') AS full_url,
-          (json_data->>'images')::jsonb AS images
-      FROM lamudi_raw_data
-      WHERE is_process = FALSE
-          AND COALESCE((json_data->'dataLayer'->'attributes'->>'price')::INTEGER, 0) > 5000
-          AND json_data->'dataLayer'->'location'->>'region' IS NOT NULL
-          AND json_data->'dataLayer'->'location'->>'city' IS NOT NULL
-          AND json_data->'dataLayer'->'attributes'->>'listing_area' IS NOT NULL
-      LIMIT 10
-      `,
+              SELECT
+                  id,
+                  json_data,
+                  json_data->'dataLayer'->>'title' AS raw_title,
+                  CASE
+                      WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'Condominium' THEN 1
+                      WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'House' THEN 2
+                      WHEN json_data->'dataLayer'->'attributes'->>'subcategory' = 'Warehouse' THEN 3
+                      WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'Land' THEN 4
+                  END AS property_type_id,
+                  CASE
+                      WHEN json_data->'dataLayer'->'attributes'->>'offer_type' = 'Buy' THEN 1
+                      WHEN json_data->'dataLayer'->'attributes'->>'offer_type' = 'Rent' THEN 2
+                  END AS offer_type_id,
+                  json_data->'dataLayer'->>'agent_name' AS agent_name,
+                  json_data->'dataLayer'->'attributes'->>'product_owner_name' AS product_owner_name,
+                  json_data->'dataLayer'->'attributes'->>'listing_region_id' AS listing_region_id,
+                  json_data->'dataLayer'->'location'->>'region' AS region,
+                  json_data->'dataLayer'->'attributes'->>'listing_city_id' AS listing_city_id,
+                  json_data->'dataLayer'->'location'->>'city' AS city,
+                  json_data->'dataLayer'->'attributes'->>'listing_area' AS listing_area,
+                  json_data->'dataLayer'->'attributes'->>'listing_area_id' AS listing_area_id,
+                  COALESCE((json_data->'dataLayer'->'location'->>'rooms_total')::INTEGER, 0) AS rooms_total,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'floor_size')::DOUBLE PRECISION, 0) AS floor_size,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'lot_size')::DOUBLE PRECISION, 0) AS lot_size,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'land_size')::DOUBLE PRECISION, 0) AS land_size,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'building_size')::DOUBLE PRECISION, 0) AS building_size,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'bedrooms')::INTEGER, 0) AS no_of_bedrooms,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'bathrooms')::INTEGER, 0) AS no_of_bathrooms,
+                  COALESCE((json_data->'dataLayer'->'attributes'->>'car_spaces')::INTEGER, 0) AS no_of_parking_spaces,
+                  (json_data->'dataLayer'->'attributes'->>'location_longitude')::DOUBLE PRECISION AS longitude,
+                  (json_data->'dataLayer'->'attributes'->>'location_latitude')::DOUBLE PRECISION AS latitude,
+                  (json_data->'dataLayer'->'attributes'->>'year_built')::INTEGER AS year_built,
+                  json_data->'dataLayer'->'attributes'->>'image_url' AS primary_image_url,
+                  (json_data->'dataLayer'->'attributes'->>'indoor_features')::jsonb AS indoor_features,
+                  (json_data->'dataLayer'->'attributes'->>'outdoor_features')::jsonb AS outdoor_features,
+                  (json_data->'dataLayer'->'attributes'->>'other_features')::jsonb AS property_features,
+                  json_data->'dataLayer'->'attributes'->>'listing_address' AS address,
+                  json_data->'dataLayer'->'attributes'->>'project_name' AS project_name,
+                  json_data->'dataLayer'->'attributes'->>'price' AS price,
+                  json_data->'dataLayer'->'attributes'->>'price_formatted' AS price_formatted,
+                  json_data->'dataLayer'->'description'->>'text' AS description,
+                  CONCAT('https://lamudi.com.ph/', json_data->'dataLayer'->'attributes'->>'urlkey_details') AS full_url,
+                  (json_data->>'images')::jsonb AS images
+              FROM lamudi_raw_data
+              WHERE is_process = FALSE
+                  AND COALESCE((json_data->'dataLayer'->'attributes'->>'price')::INTEGER, 0) > 5000
+                  AND json_data->'dataLayer'->'location'->>'region' IS NOT NULL
+                  AND json_data->'dataLayer'->'location'->>'city' IS NOT NULL
+                  AND json_data->'dataLayer'->'attributes'->>'listing_area' IS NOT NULL
+              LIMIT 10
+              `,
             );
 
             for (const rawProperty of rawProperties.rows) {
               try {
                 let region = await transaction.queryObject(`
-                SELECT id, listing_region_id 
-                FROM Listing_Region 
-                WHERE listing_region_id = '${rawProperty.listing_region_id}'
+                  SELECT id, listing_region_id 
+                  FROM Listing_Region 
+                  WHERE listing_region_id = '${rawProperty.listing_region_id}'
               `);
 
                 let city = await transaction.queryObject(`
-                SELECT id, listing_city_id
-                FROM Listing_City
-                WHERE listing_city_id = '${rawProperty.listing_city_id}'
+                  SELECT id, listing_city_id
+                  FROM Listing_City
+                  WHERE listing_city_id = '${rawProperty.listing_city_id}'
               `);
 
                 let area = await transaction.queryObject(`
-                SELECT id
-                FROM Listing_Area
-                WHERE listing_area_id = '${rawProperty.listing_area_id}'
+                  SELECT id
+                  FROM Listing_Area
+                  WHERE listing_area_id = '${rawProperty.listing_area_id}'
               `);
 
                 if (region.rowCount === 0) {
                   region = await transaction.queryObject({
                     args: [rawProperty.region, rawProperty.listing_region_id],
-                    text:
-                      `INSERT INTO Listing_Region (region, listing_region_id)
-                         VALUES ($1, $2)
-                         RETURNING id, listing_region_id`,
+                    text: `
+                      INSERT INTO Listing_Region (region, listing_region_id)
+                      VALUES ($1, $2)
+                      RETURNING id, listing_region_id
+                    `,
                   });
                 }
 
@@ -238,10 +243,11 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.listing_city_id,
                       createdRegion.listing_region_id,
                     ],
-                    text:
-                      `INSERT INTO Listing_City (city, listing_city_id, listing_region_id)
-                         VALUES ($1, $2, $3)
-                         RETURNING id, listing_city_id`,
+                    text: `
+                      INSERT INTO Listing_City (city, listing_city_id, listing_region_id)
+                      VALUES ($1, $2, $3)
+                      RETURNING id, listing_city_id
+                    `,
                   });
                 }
 
@@ -251,9 +257,11 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.listing_area,
                       rawProperty.listing_area_id,
                     ],
-                    text: `INSERT INTO Listing_Area (area, listing_area_id)
-                         VALUES ($1, $2)
-                         RETURNING id`,
+                    text: `
+                      INSERT INTO Listing_Area (area, listing_area_id)
+                      VALUES ($1, $2)
+                      RETURNING id
+                    `,
                   });
                 }
 
@@ -277,7 +285,11 @@ export async function listenQueue(kv: Deno.Kv) {
 
                 const listing = await transaction.queryObject<Listing>({
                   args: [rawProperty.full_url, rawProperty.raw_title],
-                  text: `SELECT url FROM Listing WHERE url = $1 OR title = $2`,
+                  text: `
+                    SELECT url
+                    FROM Listing
+                    WHERE url = $1 OR title = $2
+                  `,
                 });
 
                 if (listing.rowCount && listing.rowCount > 0) {
@@ -285,8 +297,11 @@ export async function listenQueue(kv: Deno.Kv) {
 
                   const updateResult = await transaction.queryObject({
                     args: [rawProperty.id],
-                    text:
-                      `UPDATE lamudi_raw_data SET is_process = TRUE WHERE id = $1`,
+                    text: `
+                      UPDATE lamudi_raw_data
+                      SET is_process = TRUE
+                      WHERE id = $1
+                    `,
                   });
 
                   if (updateResult.rowCount === 1) {
@@ -299,9 +314,11 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.price_formatted,
                       rawProperty.full_url,
                     ],
-                    text: `UPDATE Listing 
-                   SET price = $1, price_formatted = $2
-                   WHERE url = $3`,
+                    text: `
+                      UPDATE Listing 
+                      SET price = $1, price_formatted = $2
+                      WHERE url = $3
+                    `,
                   });
 
                   if (updateListingResult.rowCount === 1) {
@@ -318,13 +335,15 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.project_name,
                       rawProperty.full_url,
                     ],
-                    text: `UPDATE Property p
-                  SET images = $1,
-                      agent_name = $2,
-                      product_owner_name = $3,
-                      project_name = $4
-                  FROM Listing l 
-                  WHERE l.property_id = p.id AND l.url = $5`,
+                    text: `
+                      UPDATE Property p
+                      SET images = $1,
+                          agent_name = $2,
+                          product_owner_name = $3,
+                          project_name = $4
+                      FROM Listing l 
+                      WHERE l.property_id = p.id AND l.url = $5
+                    `,
                   });
 
                   if (updatePropertyResult.rowCount === 1) {
@@ -343,7 +362,12 @@ export async function listenQueue(kv: Deno.Kv) {
                   try {
                     const lastCreatedProperty = await client2.queryObject<
                       { id: number }
-                    >(`SELECT id FROM Property ORDER BY created_at DESC LIMIT 1`);
+                    >(`
+                      SELECT id
+                      FROM Property
+                      ORDER BY created_at DESC
+                      LIMIT 1
+                    `);
                     lastCreatedPropertyId = lastCreatedProperty.rows[0].id +
                       Math.floor(100000 + Math.random() * 900000);
                   } catch (error) {
@@ -384,23 +408,25 @@ export async function listenQueue(kv: Deno.Kv) {
                       JSON.stringify({}), // Add missing field
                       JSON.stringify({}), // Add missing field
                     ],
-                    text: `INSERT INTO Property 
-                    (
-                      id, floor_size, lot_size, building_size, no_of_bedrooms,
-                      no_of_bathrooms, no_of_parking_spaces, longitude,
-                      latitude, year_built, primary_image_url, images,
-                      property_features, indoor_features, outdoor_features,
-                      property_type_id, address, listing_region_id, listing_city_id,
-                      listing_area_id, project_name, agent_name, product_owner_name,
-                      ceiling_height, amenities, ai_generated_description,
-                      ai_generated_basic_features
-                    )
-                  VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-                    $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
-                    $26, $27
-                  )
-                  RETURNING id`,
+                    text: `
+                      INSERT INTO Property 
+                      (
+                        id, floor_size, lot_size, building_size, no_of_bedrooms,
+                        no_of_bathrooms, no_of_parking_spaces, longitude,
+                        latitude, year_built, primary_image_url, images,
+                        property_features, indoor_features, outdoor_features,
+                        property_type_id, address, listing_region_id, listing_city_id,
+                        listing_area_id, project_name, agent_name, product_owner_name,
+                        ceiling_height, amenities, ai_generated_description,
+                        ai_generated_basic_features
+                      )
+                      VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+                        $26, $27
+                      )
+                      RETURNING id
+                    `,
                   });
                 } catch (error) {
                   throw error;
@@ -415,7 +441,12 @@ export async function listenQueue(kv: Deno.Kv) {
                   try {
                     const lastCreatedListingId = await client2.queryObject<
                       { id: number }
-                    >(`SELECT id FROM Listing ORDER BY created_at DESC LIMIT 1`);
+                    >(`
+                      SELECT id
+                      FROM Listing
+                      ORDER BY created_at DESC
+                      LIMIT 1
+                    `);
                     const newListingId = lastCreatedListingId.rows[0].id +
                       Math.floor(100000 + Math.random() * 900000);
 
@@ -434,12 +465,13 @@ export async function listenQueue(kv: Deno.Kv) {
                         property.rows[0].id,
                       ],
                       text: `
-                    INSERT INTO Listing (
-                      id,title, url, project_name, description, is_scraped,
-                      address, price_formatted, price, offer_type_id, property_id
-                    ) VALUES (
-                      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-                    ) RETURNING id
+                        INSERT INTO Listing (
+                          id, title, url, project_name, description, is_scraped,
+                          address, price_formatted, price, offer_type_id, property_id
+                        ) VALUES (
+                          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                        )
+                        RETURNING id
                       `,
                     });
 
@@ -452,8 +484,11 @@ export async function listenQueue(kv: Deno.Kv) {
 
                     const updateResult = await transaction.queryObject({
                       args: [rawProperty.id],
-                      text:
-                        `UPDATE lamudi_raw_data SET is_process = TRUE WHERE id = $1`,
+                      text: `
+                        UPDATE lamudi_raw_data
+                        SET is_process = TRUE
+                        WHERE id = $1
+                      `,
                     });
 
                     if (updateResult.rowCount === 1) {
