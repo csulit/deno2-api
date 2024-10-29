@@ -219,7 +219,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     `,
                   });
                   // Add delay after creating region
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
 
                 let city = await client2.queryObject(`
@@ -246,7 +246,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     `,
                   });
                   // Add delay after creating city
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
 
                 let area = await client2.queryObject(`
@@ -268,7 +268,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     `,
                   });
                   // Add delay after creating area
-                  await new Promise(resolve => setTimeout(resolve, 1000));
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
                 }
 
                 // Verify records exist after creation
@@ -285,19 +285,24 @@ export async function listenQueue(kv: Deno.Kv) {
                   WHERE listing_area_id = '${rawProperty.listing_area_id}'
                 `);
 
-                if (!verifyRegion.rowCount || !verifyCity.rowCount || !verifyArea.rowCount) {
-                  throw new Error('Failed to verify created records');
+                if (
+                  !verifyRegion.rowCount || !verifyCity.rowCount ||
+                  !verifyArea.rowCount
+                ) {
+                  throw new Error("Failed to verify created records");
                 }
 
                 rawProperty.listing_region_id =
                   (verifyRegion.rows[0] as { id: number }).id
                     .toString();
-                rawProperty.listing_city_id = (verifyCity.rows[0] as { id: number })
-                  .id
-                  .toString();
-                rawProperty.listing_area_id = (verifyArea.rows[0] as { id: number })
-                  .id
-                  .toString();
+                rawProperty.listing_city_id =
+                  (verifyCity.rows[0] as { id: number })
+                    .id
+                    .toString();
+                rawProperty.listing_area_id =
+                  (verifyArea.rows[0] as { id: number })
+                    .id
+                    .toString();
               } catch (error) {
                 throw error;
               }
