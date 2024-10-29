@@ -67,7 +67,7 @@ export const openaiAssistant = async (question: string) => {
 
   const lastMessageForRun = messages.data
     .filter(
-      (message) => message.run_id === run.id && message.role === "assistant"
+      (message) => message.run_id === run.id && message.role === "assistant",
     )
     .pop();
 

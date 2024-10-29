@@ -4,17 +4,11 @@ import { cors } from "npm:hono/cors";
 
 import { dbPool } from "./config/postgres.ts";
 import { getKvInstance, listenQueue, sendMessage } from "./config/deno-kv.ts";
-import { openaiAssistant } from "./services/openai-assistant.ts";
 
 const app = new Hono();
 const kv = await getKvInstance();
 
-app.use(
-  "*",
-  cors({
-    origin: "*",
-  }),
-);
+app.use("*", cors({ origin: "*" }));
 
 app.get("/api/properties", async (c: Context) => {
   using client = await dbPool.connect();
@@ -349,10 +343,10 @@ app.get("/api/properties/valuation", async (c: Context) => {
   }
 
   const queryParams: (number)[] = [propertyTypeId, sizeInSqm];
-  let cityClause = '';
-  let propertyFeaturesClause = '';
+  let cityClause = "";
+  let propertyFeaturesClause = "";
   let paramCounter = 3;
-  
+
   if (data.city_id) {
     const cityId = parseInt(data.city_id);
     if (isNaN(cityId) || cityId < 1) {
@@ -391,7 +385,8 @@ app.get("/api/properties/valuation", async (c: Context) => {
         return c.json({ error: "Invalid number of parking spaces" }, 400);
       }
       queryParams.push(parkingSpaces);
-      propertyFeaturesClause += `AND p.no_of_parking_spaces = $${paramCounter} `;
+      propertyFeaturesClause +=
+        `AND p.no_of_parking_spaces = $${paramCounter} `;
       paramCounter++;
     }
   }
@@ -427,30 +422,40 @@ app.get("/api/properties/valuation", async (c: Context) => {
         COUNT(*) as total_comparable_properties
       FROM PropertyStats l
       GROUP BY l.offer_type_id
-    `
+    `,
   });
 
   if (!properties.rows.length) {
-    return c.json({ 
-      error: "Not enough data to generate valuation for the specified criteria" 
+    return c.json({
+      error: "Not enough data to generate valuation for the specified criteria",
     }, 404);
   }
 
-  const valuationData = properties.rows.reduce((acc, row) => {
-    const type = row.offer_type_id === 1 ? 'buy' : 'rent';
-    const formattedPrice = new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-      minimumFractionDigits: 2
-    }).format(row.average_price);
-    
-    acc[type] = {
-      average_price: row.average_price.toString(),
-      formatted_price: formattedPrice,
-      total_comparable_properties: row.total_comparable_properties.toString()
-    };
-    return acc;
-  }, {} as Record<string, {average_price: string, formatted_price: string, total_comparable_properties: string}>);
+  const valuationData = properties.rows.reduce(
+    (acc, row) => {
+      const type = row.offer_type_id === 1 ? "buy" : "rent";
+      const formattedPrice = new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        minimumFractionDigits: 2,
+      }).format(row.average_price);
+
+      acc[type] = {
+        average_price: row.average_price.toString(),
+        formatted_price: formattedPrice,
+        total_comparable_properties: row.total_comparable_properties.toString(),
+      };
+      return acc;
+    },
+    {} as Record<
+      string,
+      {
+        average_price: string;
+        formatted_price: string;
+        total_comparable_properties: string;
+      }
+    >,
+  );
 
   return c.json({ data: valuationData });
 });
@@ -485,7 +490,6 @@ app.get("/api/properties/cities", async (c: Context) => {
 app.get("/api/properties/:id", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
-  const query = c.req.query();
 
   if (!id) {
     return c.json({ error: "Property ID is required" }, 400);

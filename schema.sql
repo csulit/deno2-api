@@ -82,6 +82,9 @@ CREATE TABLE Property (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     geog GEOGRAPHY(Point, 4326),
+    project_name VARCHAR(100),
+    agent_name VARCHAR(100),
+    product_owner_name VARCHAR(100),
     CONSTRAINT check_floor_size CHECK (floor_size >= 0),
     CONSTRAINT check_lot_size CHECK (lot_size >= 0),
     CONSTRAINT check_building_size CHECK (building_size >= 0),
@@ -103,6 +106,7 @@ CREATE TABLE Listing (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
 CREATE TABLE Price_Change_Log (
    id SERIAL PRIMARY KEY,
    listing_id INTEGER NOT NULL,
@@ -113,6 +117,7 @@ CREATE TABLE Price_Change_Log (
 );
 
 CREATE TABLE Lamudi_raw_data (
+    id SERIAL PRIMARY KEY,
     json_data JSONB,
     listingUrl TEXT,
     images JSONB,
@@ -250,3 +255,59 @@ WHERE
     ST_DWithin(p.geog, search_point.geog, search_point.max_distance_km * 1000)
 ORDER BY
     distance_km;
+
+
+SELECT
+    id, json_data,
+    json_data->'dataLayer'->>'title' AS raw_title,
+    CASE
+        WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'Condominium' THEN 1
+        WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'House' THEN 2
+        WHEN json_data->'dataLayer'->'attributes'->>'subcategory' = 'Warehouse' THEN 3
+        WHEN json_data->'dataLayer'->'attributes'->>'attribute_set_name' = 'Land' THEN 4
+    END AS property_type_id,
+    CASE
+        WHEN json_data->'dataLayer'->'attributes'->>'offer_type' = 'Buy' THEN 1
+        WHEN json_data->'dataLayer'->'attributes'->>'offer_type' = 'Rent' THEN 2
+    END AS offer_type_id,
+    json_data->'dataLayer'->>'agent_name' AS agent_name,
+    json_data->'dataLayer'->'attributes'->>'product_owner_name' AS product_owner_name,
+    json_data->'dataLayer'->'attributes'->>'listing_region_id' AS listing_region_id,
+    json_data->'dataLayer'->'location'->>'region' AS region,
+    json_data->'dataLayer'->'attributes'->>'listing_city_id' AS listing_city_id,
+    json_data->'dataLayer'->'location'->>'city' AS city,
+    json_data->'dataLayer'->'attributes'->>'listing_area' AS listing_area,
+    json_data->'dataLayer'->'attributes'->>'listing_area_id' AS listing_area_id,
+    COALESCE((json_data->'dataLayer'->'location'->>'rooms_total')::INTEGER, 0) AS rooms_total,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'floor_size')::DOUBLE PRECISION, 0) AS floor_size,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'lot_size')::DOUBLE PRECISION, 0) AS lot_size,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'land_size')::DOUBLE PRECISION, 0) AS land_size,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'building_size')::DOUBLE PRECISION, 0) AS building_size,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'bedrooms')::INTEGER, 0) AS no_of_bedrooms,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'bathrooms')::INTEGER, 0) AS no_of_bathrooms,
+    COALESCE((json_data->'dataLayer'->'attributes'->>'car_spaces')::INTEGER, 0) AS no_of_parking_spaces,
+    (json_data->'dataLayer'->'attributes'->>'location_longitude')::DOUBLE PRECISION AS longitude,
+    (json_data->'dataLayer'->'attributes'->>'location_latitude')::DOUBLE PRECISION AS latitude,
+    (json_data->'dataLayer'->'attributes'->>'year_built')::INTEGER AS year_built,
+    json_data->'dataLayer'->'attributes'->>'image_url' AS primary_image_url,
+    (json_data->'dataLayer'->'attributes'->>'indoor_features')::jsonb AS indoor_features,
+    (json_data->'dataLayer'->'attributes'->>'outdoor_features')::jsonb AS outdoor_features,
+    (json_data->'dataLayer'->'attributes'->>'other_features')::jsonb AS property_features,
+    json_data->'dataLayer'->'attributes'->>'listing_address' AS address,
+    json_data->'dataLayer'->'attributes'->>'project_name' AS project_name,
+    json_data->'dataLayer'->'attributes'->>'price' AS price,
+    json_data->'dataLayer'->'attributes'->>'price_formatted' AS price_formatted,
+    json_data->'dataLayer'->'description'->>'text' AS description,
+    CONCAT('https://lamudi.com.ph/', json_data->'dataLayer'->'attributes'->>'urlkey_details') AS full_url,
+    json_data->>'images' AS images,
+    array(
+        SELECT jsonb_array_elements(images) ->> 'src'
+        FROM lamudi_raw_data
+        WHERE id = lamudi_raw_data.id
+    ) AS image_src_urls
+FROM lamudi_raw_data
+WHERE is_process = FALSE
+    AND json_data->'dataLayer'->'location'->>'region' IS NOT NULL
+    AND json_data->'dataLayer'->'location'->>'city' IS NOT NULL
+    AND json_data->'dataLayer'->'attributes'->>'listing_area' IS NOT NULL
+LIMIT 10
