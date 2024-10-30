@@ -466,7 +466,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     throw error;
                   }
 
-                  property = await transaction.queryObject<Property>({
+                  property = await client2.queryObject<Property>({
                     args: [
                       lastCreatedPropertyId,
                       rawProperty.floor_size,
@@ -546,7 +546,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     const newListingId = lastCreatedListingId.rows[0].id +
                       Math.floor(100000 + Math.random() * 900000);
 
-                    const newListing = await transaction.queryObject<Listing>({
+                    const newListing = await client2.queryObject<Listing>({
                       args: [
                         newListingId,
                         rawProperty.raw_title,
