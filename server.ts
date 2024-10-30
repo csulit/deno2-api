@@ -499,13 +499,14 @@ app.get("/api/properties/cities", async (c: Context) => {
 });
 
 app.get("/api/properties/generate-ai-description", async (c: Context) => {
+  using client = await dbPool.connect();
   const id = c.req.param("id");
 
   if (!id) {
     return c.json({ error: "Property ID is required" }, 400);
   }
 
-const property = await client.queryObject({
+  const property = await client.queryObject({
     args: [id],
     text: `
       SELECT
