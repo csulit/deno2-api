@@ -6,6 +6,7 @@ WORKDIR /app
 COPY . /app
 
 RUN deno cache server.ts && \
+    deno install --allow-scripts && \
     deno compile --allow-net --allow-read --allow-env --unstable-kv --no-check server.ts
 
 # Runtime stage
