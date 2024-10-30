@@ -499,7 +499,7 @@ app.get("/api/properties/cities", async (c: Context) => {
   });
 });
 
-app.get("/api/properties/:id/generate-ai-description", async (c: Context) => {
+app.patch("/api/properties/:id/generate-ai-description", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
 
