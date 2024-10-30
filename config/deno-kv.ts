@@ -440,7 +440,15 @@ export async function listenQueue(kv: Deno.Kv) {
 
                 if (listingByTitle.rowCount && listingByTitle.rowCount > 0) {
                   console.info("Listing query by title already exists");
-                  continue
+                  await client2.queryObject({
+                    args: [rawProperty.id],
+                    text: `
+                      UPDATE lamudi_raw_data
+                      SET is_process = TRUE
+                      WHERE id = $1
+                    `,
+                  });
+                  continue;
                 }
 
                 let property;
