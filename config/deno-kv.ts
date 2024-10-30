@@ -222,7 +222,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   const newRegionId = lastRegionId.rows[0].id +
                     Math.floor(100000 + Math.random() * 900000);
 
-                  region = await client2.queryObject({
+                  region = await transaction.queryObject({
                     args: [
                       newRegionId,
                       rawProperty.region,
@@ -257,7 +257,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   const newCityId = lastCityId.rows[0].id +
                     Math.floor(100000 + Math.random() * 900000);
 
-                  city = await client2.queryObject({
+                  city = await transaction.queryObject({
                     args: [
                       newCityId,
                       rawProperty.city,
@@ -289,7 +289,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   const newAreaId = lastAreaId.rows[0].id +
                     Math.floor(100000 + Math.random() * 900000);
 
-                  area = await client2.queryObject({
+                  area = await transaction.queryObject({
                     args: [
                       newAreaId,
                       rawProperty.listing_area,
