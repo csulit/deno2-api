@@ -451,6 +451,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   continue;
                 }
 
+                // from here...
                 let property;
 
                 try {
