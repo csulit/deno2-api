@@ -440,7 +440,8 @@ export async function listenQueue(kv: Deno.Kv) {
 
                 if (listingByTitle.rowCount && listingByTitle.rowCount > 0) {
                   await transaction.commit()
-                  console.log("Listing query by title already exists")
+                  console.info("Listing query by title already exists")
+                  console.info("Transaction successfully committed");
                   return;
                 }
 
