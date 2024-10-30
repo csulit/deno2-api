@@ -3,6 +3,7 @@ import { type Context, Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { dbPool } from "./config/postgres.ts";
 import { getKvInstance, listenQueue, sendMessage } from "./config/deno-kv.ts";
+import { openaiAssistant } from "./services/openai-assistant.ts";
 
 const app = new Hono();
 const kv = await getKvInstance();
@@ -567,7 +568,8 @@ app.get("/api/properties/generate-ai-description", async (c: Context) => {
       FROM
           Listing l
           JOIN Property p ON l.property_id = p.id
-          LEFT JOIN Property_Type pt ON p.property_type_id = pt.property_type_id
+          LEFT JOIN Property_
+          Type pt ON p.property_type_id = pt.property_type_id
           LEFT JOIN Listing_Type lt ON l.offer_type_id = lt.listing_type_id
           LEFT JOIN Warehouse_Type wt ON p.warehouse_type_id = wt.warehouse_type_id
           LEFT JOIN Listing_Region rg ON p.listing_region_id = rg.id
@@ -582,7 +584,40 @@ app.get("/api/properties/generate-ai-description", async (c: Context) => {
     return c.json({ data: null });
   }
 
-  return c.json({ data: property.rows[0] });
+  const aiGeneratedDescription = await openaiAssistant(
+    JSON.stringify(property.rows[0]),
+  );
+
+  const propertyData = property.rows[0] as {
+    property_id: number;
+  };
+
+  try {
+    JSON.parse(
+      aiGeneratedDescription.includes("```json")
+        ? aiGeneratedDescription
+          .replace("```json", "")
+          .replace("```", "")
+        : aiGeneratedDescription,
+    );
+  } catch {
+    throw Error("Invalid AI description format");
+  }
+
+  if (aiGeneratedDescription) {
+    await client.queryObject({
+      args: [
+        JSON.stringify(aiGeneratedDescription),
+        propertyData.property_id,
+      ],
+      text: `UPDATE Property SET ai_generated_description = $1 WHERE id = $2`,
+    });
+  }
+
+  return c.json({
+    property_id: propertyData.property_id,
+    ai_generated_description: aiGeneratedDescription,
+  });
 });
 
 app.get("/api/properties/:id", async (c: Context) => {
