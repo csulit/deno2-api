@@ -578,7 +578,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       );
                     }
 
-                    const updateResult = await transaction.queryObject({
+                    const updateResult = await client2.queryObject({
                       args: [rawProperty.id],
                       text: `
                         UPDATE lamudi_raw_data
