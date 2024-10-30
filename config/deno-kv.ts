@@ -425,6 +425,8 @@ export async function listenQueue(kv: Deno.Kv) {
                   continue;
                 }
 
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+
                 let property;
 
                 try {
