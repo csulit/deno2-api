@@ -474,7 +474,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     throw error;
                   }
 
-                  property = await client2.queryObject<Property>({
+                  property = await transaction.queryObject<Property>({
                     args: [
                       lastCreatedPropertyId,
                       rawProperty.floor_size,
@@ -554,7 +554,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     const newListingId = lastCreatedListingId.rows[0].id +
                       Math.floor(100000 + Math.random() * 900000);
 
-                    const newListing = await client2.queryObject<Listing>({
+                    const newListing = await transaction.queryObject<Listing>({
                       args: [
                         newListingId,
                         rawProperty.raw_title,
@@ -586,7 +586,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       );
                     }
 
-                    const updateResult = await client2.queryObject({
+                    const updateResult = await transaction.queryObject({
                       args: [rawProperty.id],
                       text: `
                         UPDATE lamudi_raw_data
