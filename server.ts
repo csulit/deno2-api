@@ -226,7 +226,6 @@ app.get("/api/properties", async (c: Context) => {
               l.id AS listing_id,
               l.title,
               l.url,
-              l.project_name,
               l.description,
               l.is_scraped,
               l.price,
