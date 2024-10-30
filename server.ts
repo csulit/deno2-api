@@ -498,6 +498,92 @@ app.get("/api/properties/cities", async (c: Context) => {
   });
 });
 
+app.get("/api/properties/generate-ai-description", async (c: Context) => {
+  const id = c.req.param("id");
+
+  if (!id) {
+    return c.json({ error: "Property ID is required" }, 400);
+  }
+
+const property = await client.queryObject({
+    args: [id],
+    text: `
+      SELECT
+          l.id AS listing_id,
+          l.title,
+          l.url,
+          l.description,
+          l.is_scraped,
+          l.price,
+          l.price_formatted,
+          p.id AS property_id,
+          p.user_id,
+          p.floor_size,
+          p.lot_size,
+          p.building_size,
+          p.ceiling_height,
+          p.no_of_bedrooms,
+          p.no_of_bathrooms,
+          p.no_of_parking_spaces,
+          p.longitude,
+          p.latitude,
+          p.year_built,
+          p.primary_image_url,
+          p.images,
+          p.amenities,
+          p.property_features,
+          p.indoor_features,
+          p.outdoor_features,
+          p.ai_generated_description,
+          p.ai_generated_basic_features,
+          p.project_name AS property_project_name,
+          p.agent_name,
+          p.product_owner_name,
+          pt.type_name AS property_type_name,
+          lt.type_name AS listing_type_name,
+          wt.type_name AS warehouse_type_name,
+          l.address AS listing_address,
+          rg.region AS listing_region_name,
+          ct.city AS listing_city_name,
+          ar.area AS listing_area_name,
+          p.created_at AS property_created_at,
+          p.updated_at AS property_updated_at,
+          l.created_at AS listing_created_at,
+          l.updated_at AS listing_updated_at,
+          -- Price change log as an array ordered by latest changes
+          (
+              SELECT json_agg(
+                  json_build_object(
+                      'id', pcl.id,
+                      'old_price', pcl.old_price,
+                      'new_price', pcl.new_price,
+                      'change_timestamp', pcl.change_timestamp
+                  ) ORDER BY pcl.change_timestamp DESC
+              )
+              FROM Price_Change_Log pcl
+              WHERE pcl.listing_id = l.id
+          ) AS price_change_log
+      FROM
+          Listing l
+          JOIN Property p ON l.property_id = p.id
+          LEFT JOIN Property_Type pt ON p.property_type_id = pt.property_type_id
+          LEFT JOIN Listing_Type lt ON l.offer_type_id = lt.listing_type_id
+          LEFT JOIN Warehouse_Type wt ON p.warehouse_type_id = wt.warehouse_type_id
+          LEFT JOIN Listing_Region rg ON p.listing_region_id = rg.id
+          LEFT JOIN Listing_City ct ON p.listing_city_id = ct.id
+          LEFT JOIN Listing_Area ar ON p.listing_area_id = ar.id
+      WHERE
+          l.id = $1
+    `,
+  });
+
+  if (property.rowCount === 0) {
+    return c.json({ data: null });
+  }
+
+  return c.json({ data: property.rows[0] });
+});
+
 app.get("/api/properties/:id", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
