@@ -352,24 +352,24 @@ export async function listenQueue(kv: Deno.Kv) {
               for (const rawProperty of rawProperties.rows) {
                 const images = rawProperty.images.map((image) => image.src);
 
-                const listing = await client2.queryObject<Listing>({
-                  args: [rawProperty.full_url, rawProperty.raw_title],
+                const listingByUrl = await client2.queryObject<Listing>({
+                  args: [rawProperty.full_url],
                   text: `
                     SELECT l.url, l.id, p.id as property_id 
                     FROM Listing l
                     JOIN Property p ON p.id = l.property_id
-                    WHERE l.url = $1 OR l.title = $2
+                    WHERE l.url = $1
                   `,
                 });
 
-                if (listing.rowCount && listing.rowCount > 0) {
+                if (listingByUrl.rowCount && listingByUrl.rowCount > 0) {
                   console.info("Listing already exists");
 
                   const updateListingResult = await transaction.queryObject({
                     args: [
                       rawProperty.price,
                       rawProperty.price_formatted,
-                      listing.rows[0].id,
+                      listingByUrl.rows[0].id,
                     ],
                     text: `
                       UPDATE Listing 
@@ -390,7 +390,7 @@ export async function listenQueue(kv: Deno.Kv) {
                       rawProperty.agent_name,
                       rawProperty.product_owner_name,
                       rawProperty.project_name,
-                      listing.rows[0].property_id,
+                      listingByUrl.rows[0].property_id,
                     ],
                     text: `
                       UPDATE Property p
@@ -426,6 +426,21 @@ export async function listenQueue(kv: Deno.Kv) {
                 }
 
                 await new Promise((resolve) => setTimeout(resolve, 1000));
+
+                // Re-check listing by title
+                const listingByTitle = await client2.queryObject<Listing>({
+                  args: [rawProperty.raw_title],
+                  text: `
+                    SELECT l.url, l.id, p.id as property_id 
+                    FROM Listing l
+                    JOIN Property p ON p.id = l.property_id
+                    WHERE l.title = $1
+                  `,
+                });
+
+                if (listingByTitle.rowCount && listingByTitle.rowCount > 0) {
+                  continue;
+                }
 
                 let property;
 
