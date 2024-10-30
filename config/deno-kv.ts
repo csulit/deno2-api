@@ -131,7 +131,7 @@ export async function listenQueue(kv: Deno.Kv) {
 
             await transaction.begin();
 
-            const rawPropertiesCount = await transaction.queryObject<
+            const rawPropertiesCount = await client2.queryObject<
               { count: number }
             >({
               text: `
@@ -145,7 +145,7 @@ export async function listenQueue(kv: Deno.Kv) {
               `Processing ${rawPropertiesCount.rows[0].count} raw properties`,
             );
 
-            const rawProperties = await transaction.queryObject<RawLamudiData>(
+            const rawProperties = await client2.queryObject<RawLamudiData>(
               `
               SELECT
                   id,
@@ -365,7 +365,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 if (listingByUrl.rowCount && listingByUrl.rowCount > 0) {
                   console.info("Listing query by url already exists");
 
-                  const updateListingResult = await transaction.queryObject({
+                  const updateListingResult = await client2.queryObject({
                     args: [
                       rawProperty.price,
                       rawProperty.price_formatted,
@@ -384,7 +384,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     );
                   }
 
-                  const updatePropertyResult = await transaction.queryObject({
+                  const updatePropertyResult = await client2.queryObject({
                     args: [
                       JSON.stringify(images),
                       rawProperty.agent_name,
@@ -409,7 +409,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     );
                   }
 
-                  const updateResult = await transaction.queryObject({
+                  const updateResult = await client2.queryObject({
                     args: [rawProperty.id],
                     text: `
                       UPDATE lamudi_raw_data
@@ -439,9 +439,7 @@ export async function listenQueue(kv: Deno.Kv) {
                 });
 
                 if (listingByTitle.rowCount && listingByTitle.rowCount > 0) {
-                  await transaction.commit()
                   console.info("Listing query by title already exists")
-                  console.info("Transaction successfully committed");
                   return;
                 }
 
@@ -468,7 +466,7 @@ export async function listenQueue(kv: Deno.Kv) {
                     throw error;
                   }
 
-                  property = await client2.queryObject<Property>({
+                  property = await transaction.queryObject<Property>({
                     args: [
                       lastCreatedPropertyId,
                       rawProperty.floor_size,
