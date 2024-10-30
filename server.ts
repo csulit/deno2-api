@@ -35,6 +35,8 @@ app.get("/api/properties", async (c: Context) => {
     no_of_bathrooms_max?: string;
     no_of_parking_spaces_min?: string;
     no_of_parking_spaces_max?: string;
+    price_min?: string;
+    price_max?: string;
     ai_generated_description?: string;
     sort_by?: string;
     sort_order?: string;
@@ -130,6 +132,15 @@ app.get("/api/properties", async (c: Context) => {
     `,
       searchLongitude,
       searchLatitude,
+    );
+  }
+
+  // Add price range condition if both min and max are provided
+  if (query.price_min && query.price_max) {
+    addWhereCondition(
+      `l.price BETWEEN $${paramCounter} AND $${paramCounter + 1}`,
+      parseFloat(query.price_min),
+      parseFloat(query.price_max),
     );
   }
 
