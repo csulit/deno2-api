@@ -129,6 +129,8 @@ export async function listenQueue(kv: Deno.Kv) {
               throw Error("Client not created");
             }
 
+            await transaction.begin();
+
             const rawPropertiesCount = await client2.queryObject<
               { count: number }
             >({
@@ -440,8 +442,6 @@ export async function listenQueue(kv: Deno.Kv) {
                   console.info("Listing query by title already exists");
                   continue
                 }
-
-                await transaction.begin();
 
                 let property;
 
