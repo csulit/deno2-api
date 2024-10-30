@@ -369,12 +369,13 @@ export async function listenQueue(kv: Deno.Kv) {
                     args: [
                       rawProperty.price,
                       rawProperty.price_formatted,
+                      rawProperty.project_name,
                       listingByUrl.rows[0].id,
                     ],
                     text: `
                       UPDATE Listing 
-                      SET price = $1, price_formatted = $2
-                      WHERE id = $3
+                      SET price = $1, price_formatted = $2, project_name = $3
+                      WHERE id = $4
                     `,
                   });
 
