@@ -568,8 +568,7 @@ app.patch("/api/properties/:id/generate-ai-description", async (c: Context) => {
       FROM
           Listing l
           JOIN Property p ON l.property_id = p.id
-          LEFT JOIN Property_
-          Type pt ON p.property_type_id = pt.property_type_id
+          LEFT JOIN Property_Type pt ON p.property_type_id = pt.property_type_id
           LEFT JOIN Listing_Type lt ON l.offer_type_id = lt.listing_type_id
           LEFT JOIN Warehouse_Type wt ON p.warehouse_type_id = wt.warehouse_type_id
           LEFT JOIN Listing_Region rg ON p.listing_region_id = rg.id
