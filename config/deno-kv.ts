@@ -449,7 +449,8 @@ export async function listenQueue(kv: Deno.Kv) {
                       WHERE id = $1
                     `,
                   });
-                  continue;
+                  if (transaction) await transaction.commit();
+                  return;
                 }
 
                 // from here...
