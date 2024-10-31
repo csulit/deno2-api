@@ -37,7 +37,6 @@ app.get("/api/properties", async (c: Context) => {
     no_of_parking_spaces_max?: string;
     price_min?: string;
     price_max?: string;
-    ai_generated_description?: string;
     sort_by?: string;
     sort_order?: string;
     search?: string;
@@ -207,11 +206,6 @@ app.get("/api/properties", async (c: Context) => {
       parseInt(query.no_of_parking_spaces_min),
       parseInt(query.no_of_parking_spaces_max),
     );
-  }
-
-  // Add AI generated description filter if value is 1
-  if (query.ai_generated_description === "1") {
-    addWhereCondition(`p.ai_generated_description IS NOT NULL`);
   }
 
   // Validate and construct ORDER BY clause
