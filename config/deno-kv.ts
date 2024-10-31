@@ -138,7 +138,7 @@ export async function listenQueue(kv: Deno.Kv) {
               text: `
                 SELECT COUNT(*)
                 FROM lamudi_raw_data
-                WHERE is_process = FALSE
+                WHERE is_process = FALSE AND price_not_shown_is_process = FALSE
               `,
             });
 
