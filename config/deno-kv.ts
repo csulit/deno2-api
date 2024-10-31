@@ -211,6 +211,11 @@ export async function listenQueue(kv: Deno.Kv) {
                   args: [rawProperty.full_url, rawProperty.raw_title],
                   text: `UPDATE listing SET price_not_shown = TRUE WHERE url = $1 OR title = $2`,
                 });
+
+                await transaction.queryObject({
+                  args: [rawProperty.id],
+                  text: `UPDATE lamudi_raw_data SET price_not_shown_is_process = TRUE WHERE id = $1`,
+                });
               }
 
               // try {
