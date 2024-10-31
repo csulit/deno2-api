@@ -188,7 +188,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   (json_data->'dataLayer'->'attributes'->>'other_features')::jsonb AS property_features,
                   json_data->'dataLayer'->'attributes'->>'listing_address' AS address,
                   json_data->'dataLayer'->'attributes'->>'project_name' AS project_name,
-                  json_data->'dataLayer'->'attributes'->>'price' AS price,
+                  (json_data->'dataLayer'->'attributes'->>'price')::BIGINT AS price,
                   json_data->'dataLayer'->'attributes'->>'price_formatted' AS price_formatted,
                   json_data->'dataLayer'->'description'->>'text' AS description,
                   CONCAT('https://lamudi.com.ph/', json_data->'dataLayer'->'attributes'->>'urlkey_details') AS full_url,

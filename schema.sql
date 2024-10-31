@@ -124,7 +124,7 @@ CREATE TABLE Listing (
     is_scraped BOOLEAN NOT NULL DEFAULT FALSE,
     address VARCHAR(255),
     price_formatted VARCHAR(255),
-    price DOUBLE PRECISION NOT NULL CHECK (price >= 0),
+    price NUMERIC(15,2) NOT NULL CHECK (price >= 0),
     price_not_shown BOOLEAN default false,
     offer_type_id INT NOT NULL REFERENCES Listing_Type(listing_type_id),
     property_id INT NOT NULL REFERENCES Property(id) ON DELETE CASCADE,
