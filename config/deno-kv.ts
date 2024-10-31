@@ -207,11 +207,16 @@ export async function listenQueue(kv: Deno.Kv) {
               const priceNotShown = rawProperty.price_not_shown === "true";
 
               if (priceNotShown) {
-                await transaction.queryObject({
-                  args: [rawProperty.full_url, rawProperty.raw_title],
-                  text:
-                    `UPDATE listing SET price_not_shown = TRUE WHERE url = $1 OR title = $2`,
+                const listingId = await transaction.queryObject<{ id: number }>(
+                  {
+                    args: [rawProperty.full_url, rawProperty.raw_title],
+                    text:
+                    `UPDATE listing SET price_not_shown = TRUE WHERE url = $1 OR title = $2 RETURNING id`,
                 });
+
+                if (listingId.rowCount && listingId.rowCount > 0) {
+                  console.info("Listing ID:", listingId.rows[0].id);
+                }
               }
 
               await transaction.queryObject({
