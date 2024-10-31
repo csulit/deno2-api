@@ -195,7 +195,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   (json_data->>'images')::jsonb AS images
               FROM lamudi_raw_data
               WHERE is_process = FALSE AND price_not_shown_is_process = FALSE
-                  AND COALESCE((json_data->'dataLayer'->'attributes'->>'price')::INTEGER, 0) > 5000
+                  AND COALESCE((json_data->'dataLayer'->'attributes'->>'price')::BIGINT, 0) > 5000
                   AND json_data->'dataLayer'->'location'->>'region' IS NOT NULL
                   AND json_data->'dataLayer'->'location'->>'city' IS NOT NULL
                   AND json_data->'dataLayer'->'attributes'->>'listing_area' IS NOT NULL
