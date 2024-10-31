@@ -125,6 +125,7 @@ CREATE TABLE Listing (
     address VARCHAR(255),
     price_formatted VARCHAR(255),
     price DOUBLE PRECISION NOT NULL CHECK (price >= 0),
+    price_not_shown BOOLEAN default false,
     offer_type_id INT NOT NULL REFERENCES Listing_Type(listing_type_id),
     property_id INT NOT NULL REFERENCES Property(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -148,6 +149,7 @@ CREATE TABLE Lamudi_raw_data (
     listingUrl TEXT,
     images JSONB,
     is_process BOOLEAN default false,
+    price_not_shown_is_process BOOLEAN default false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
