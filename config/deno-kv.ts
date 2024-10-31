@@ -209,21 +209,23 @@ export async function listenQueue(kv: Deno.Kv) {
               if (priceNotShown) {
                 await transaction.queryObject({
                   args: [rawProperty.full_url, rawProperty.raw_title],
-                  text: `UPDATE listing SET price_not_shown = TRUE WHERE url = $1 OR title = $2`,
-                });
-
-                await transaction.queryObject({
-                  args: [rawProperty.id],
-                  text: `UPDATE lamudi_raw_data SET price_not_shown_is_process = TRUE WHERE id = $1`,
+                  text:
+                    `UPDATE listing SET price_not_shown = TRUE WHERE url = $1 OR title = $2`,
                 });
               }
+
+              await transaction.queryObject({
+                args: [rawProperty.id],
+                text:
+                  `UPDATE lamudi_raw_data SET price_not_shown_is_process = TRUE WHERE id = $1`,
+              });
 
               // try {
               //   let region = await client2.queryObject({
               //     args: [rawProperty.listing_region_id, rawProperty.region],
               //     text: `
-              //       SELECT id, listing_region_id 
-              //       FROM Listing_Region 
+              //       SELECT id, listing_region_id
+              //       FROM Listing_Region
               //       WHERE listing_region_id = $1 OR region = $2
               //     `,
               //   });
@@ -321,7 +323,7 @@ export async function listenQueue(kv: Deno.Kv) {
 
               //   // Verify records exist after creation
               //   const verifyRegion = await client2.queryObject(`
-              //     SELECT id FROM Listing_Region 
+              //     SELECT id FROM Listing_Region
               //     WHERE listing_region_id = '${rawProperty.listing_region_id}'
               //   `);
               //   const verifyCity = await client2.queryObject(`
@@ -371,7 +373,7 @@ export async function listenQueue(kv: Deno.Kv) {
             //     const listingByUrl = await client2.queryObject<Listing>({
             //       args: [rawProperty.full_url],
             //       text: `
-            //         SELECT l.url, l.id, p.id as property_id 
+            //         SELECT l.url, l.id, p.id as property_id
             //         FROM Listing l
             //         JOIN Property p ON p.id = l.property_id
             //         WHERE l.url = $1
@@ -389,7 +391,7 @@ export async function listenQueue(kv: Deno.Kv) {
             //           listingByUrl.rows[0].id,
             //         ],
             //         text: `
-            //           UPDATE Listing 
+            //           UPDATE Listing
             //           SET price = $1, price_formatted = $2, project_name = $3
             //           WHERE id = $4
             //         `,
@@ -415,7 +417,7 @@ export async function listenQueue(kv: Deno.Kv) {
             //               agent_name = $2,
             //               product_owner_name = $3,
             //               project_name = $4
-            //           FROM Listing l 
+            //           FROM Listing l
             //           WHERE p.id = $5
             //         `,
             //       });
@@ -448,7 +450,7 @@ export async function listenQueue(kv: Deno.Kv) {
             //     const listingByTitle = await client2.queryObject<Listing>({
             //       args: [rawProperty.raw_title],
             //       text: `
-            //         SELECT l.url, l.id, p.id as property_id 
+            //         SELECT l.url, l.id, p.id as property_id
             //         FROM Listing l
             //         JOIN Property p ON p.id = l.property_id
             //         WHERE l.title = $1
@@ -523,7 +525,7 @@ export async function listenQueue(kv: Deno.Kv) {
             //             JSON.stringify({}), // Add missing field
             //           ],
             //           text: `
-            //           INSERT INTO Property 
+            //           INSERT INTO Property
             //           (
             //             id, floor_size, lot_size, building_size, no_of_bedrooms,
             //             no_of_bathrooms, no_of_parking_spaces, longitude,
