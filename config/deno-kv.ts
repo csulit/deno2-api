@@ -199,7 +199,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   AND json_data->'dataLayer'->'location'->>'region' IS NOT NULL
                   AND json_data->'dataLayer'->'location'->>'city' IS NOT NULL
                   AND json_data->'dataLayer'->'attributes'->>'listing_area' IS NOT NULL
-              LIMIT 3
+              LIMIT 10
               `,
             );
 
