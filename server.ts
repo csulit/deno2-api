@@ -490,21 +490,23 @@ app.get("/api/properties/cities", async (c: Context) => {
     args: [`%${search}%`, query.property_type_id],
     text: `
       SELECT DISTINCT 
-        ct.id,
+        ct.id::text,
         ct.city,
         ct.listing_city_id,
-        rg.id as region_id,
+        rg.id::text as region_id,
         rg.region as region_name,
         rg.listing_region_id,
+        pt.type_name as property_type_name,
         COUNT(DISTINCT CASE 
-          WHEN $2::int IS NULL OR p.property_type_id = $2::int 
+          WHEN p.property_type_id = $2::int 
           THEN p.id 
-        END) as property_count
+        END)::text as property_count
       FROM Listing_City ct
       JOIN Listing_Region rg ON ct.listing_region_id = rg.id
       LEFT JOIN Property p ON p.listing_city_id = ct.id
+      LEFT JOIN Property_Type pt ON pt.property_type_id = $2::int
       WHERE LOWER(ct.city) LIKE LOWER($1)
-      GROUP BY ct.id, ct.city, ct.listing_city_id, rg.id, rg.region, rg.listing_region_id
+      GROUP BY ct.id, ct.city, ct.listing_city_id, rg.id, rg.region, rg.listing_region_id, pt.type_name
       ORDER BY ct.city ASC
       LIMIT 10
     `,
