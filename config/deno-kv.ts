@@ -204,30 +204,6 @@ export async function listenQueue(kv: Deno.Kv) {
             );
 
             for (const rawProperty of rawProperties.rows) {
-              const priceNotShown = rawProperty.price_not_shown === "true";
-
-              const listingId = await transaction.queryObject<{ id: number }>(
-                {
-                  args: [
-                    priceNotShown,
-                    rawProperty.full_url,
-                    rawProperty.raw_title,
-                  ],
-                  text:
-                    `UPDATE listing SET price_not_shown = $1 WHERE url = $2 OR title = $3 RETURNING id`,
-                },
-              );
-
-              if (listingId.rowCount && listingId.rowCount > 0) {
-                console.info("Listing ID:", listingId.rows[0].id);
-              }
-
-              await transaction.queryObject({
-                args: [rawProperty.id],
-                text:
-                  `UPDATE lamudi_raw_data SET price_not_shown_is_process = TRUE WHERE id = $1`,
-              });
-
               try {
                 let region = await client2.queryObject({
                   args: [rawProperty.listing_region_id, rawProperty.region],
@@ -544,6 +520,7 @@ export async function listenQueue(kv: Deno.Kv) {
                   );
 
                   try {
+              const priceNotShown = rawProperty.price_not_shown === "true";
                     const lastCreatedListingId = await client2.queryObject<
                       { id: number }
                     >(`
@@ -568,14 +545,16 @@ export async function listenQueue(kv: Deno.Kv) {
                           rawProperty.price_formatted,
                           rawProperty.price,
                           rawProperty.offer_type_id,
+                          priceNotShown,
                           property.rows[0].id,
                         ],
                         text: `
                         INSERT INTO Listing (
                           id, title, url, project_name, description, is_scraped,
-                          address, price_formatted, price, offer_type_id, property_id
+                          address, price_formatted, price, offer_type_id, price_not_shown,
+                          property_id
                         ) VALUES (
-                          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
                         )
                         RETURNING id
                       `,
