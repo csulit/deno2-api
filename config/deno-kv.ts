@@ -452,87 +452,60 @@ export async function listenQueue(kv: Deno.Kv) {
                   continue;
                 }
 
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+                let property;
 
-                // Re-check listing by title
-                const listingByTitle = await client2.queryObject<Listing>({
-                  args: [rawProperty.raw_title],
-                  text: `
-                    SELECT l.url, l.id, p.id as property_id
-                    FROM Listing l
-                    JOIN Property p ON p.id = l.property_id
-                    WHERE l.title = $1
-                  `,
-                });
-
-                if (listingByTitle.rowCount && listingByTitle.rowCount > 0) {
-                  console.info("Listing query by title already exists");
-                  await client2.queryObject({
-                    args: [rawProperty.id],
-                    text: `
-                      UPDATE lamudi_raw_data
-                      SET is_process = TRUE
-                      WHERE id = $1
-                    `,
-                  });
-                  continue;
-                }
-
-                if (!listingByTitle.rowCount) {
-                  let property;
-
+                try {
+                  let lastCreatedPropertyId;
                   try {
-                    let lastCreatedPropertyId;
-                    try {
-                      const lastCreatedProperty = await client2.queryObject<
-                        { id: number }
-                      >(`
+                    const lastCreatedProperty = await client2.queryObject<
+                      { id: number }
+                    >(`
                       SELECT id
                       FROM Property
                       ORDER BY created_at DESC
                       LIMIT 1
                     `);
-                      lastCreatedPropertyId = lastCreatedProperty.rows[0].id +
-                        Math.floor(100000 + Math.random() * 900000);
-                    } catch (error) {
-                      console.error(
-                        "Error fetching last created property:",
-                        error,
-                      );
-                      throw error;
-                    }
+                    lastCreatedPropertyId = lastCreatedProperty.rows[0].id +
+                      Math.floor(100000 + Math.random() * 900000);
+                  } catch (error) {
+                    console.error(
+                      "Error fetching last created property:",
+                      error,
+                    );
+                    throw error;
+                  }
 
-                    property = await transaction.queryObject<Property>({
-                      args: [
-                        lastCreatedPropertyId,
-                        rawProperty.floor_size,
-                        rawProperty.lot_size,
-                        rawProperty.building_size,
-                        rawProperty.no_of_bedrooms,
-                        rawProperty.no_of_bathrooms,
-                        rawProperty.no_of_parking_spaces,
-                        rawProperty.longitude,
-                        rawProperty.latitude,
-                        rawProperty.year_built ?? 0,
-                        rawProperty.primary_image_url,
-                        JSON.stringify(images),
-                        JSON.stringify(rawProperty.property_features),
-                        JSON.stringify(rawProperty.indoor_features),
-                        JSON.stringify(rawProperty.outdoor_features),
-                        rawProperty.property_type_id ?? 5, // Default to "Others" property type if null/undefined
-                        rawProperty.address ?? "-",
-                        parseInt(rawProperty.listing_region_id),
-                        parseInt(rawProperty.listing_city_id),
-                        parseInt(rawProperty.listing_area_id),
-                        rawProperty.project_name,
-                        rawProperty.agent_name,
-                        rawProperty.product_owner_name,
-                        0, // Add missing required field
-                        JSON.stringify({}), // Add missing field
-                        JSON.stringify({}), // Add missing field
-                        JSON.stringify({}), // Add missing field
-                      ],
-                      text: `
+                  property = await transaction.queryObject<Property>({
+                    args: [
+                      lastCreatedPropertyId,
+                      rawProperty.floor_size,
+                      rawProperty.lot_size,
+                      rawProperty.building_size,
+                      rawProperty.no_of_bedrooms,
+                      rawProperty.no_of_bathrooms,
+                      rawProperty.no_of_parking_spaces,
+                      rawProperty.longitude,
+                      rawProperty.latitude,
+                      rawProperty.year_built ?? 0,
+                      rawProperty.primary_image_url,
+                      JSON.stringify(images),
+                      JSON.stringify(rawProperty.property_features),
+                      JSON.stringify(rawProperty.indoor_features),
+                      JSON.stringify(rawProperty.outdoor_features),
+                      rawProperty.property_type_id ?? 5, // Default to "Others" property type if null/undefined
+                      rawProperty.address ?? "-",
+                      parseInt(rawProperty.listing_region_id),
+                      parseInt(rawProperty.listing_city_id),
+                      parseInt(rawProperty.listing_area_id),
+                      rawProperty.project_name,
+                      rawProperty.agent_name,
+                      rawProperty.product_owner_name,
+                      0, // Add missing required field
+                      JSON.stringify({}), // Add missing field
+                      JSON.stringify({}), // Add missing field
+                      JSON.stringify({}), // Add missing field
+                    ],
+                    text: `
                       INSERT INTO Property
                       (
                         id, floor_size, lot_size, building_size, no_of_bedrooms,
@@ -551,7 +524,83 @@ export async function listenQueue(kv: Deno.Kv) {
                       )
                       RETURNING id
                     `,
+                  });
+                } catch (error) {
+                  await client2.queryObject({
+                    args: [rawProperty.id],
+                    text: `
+                      UPDATE lamudi_raw_data
+                      SET is_process = TRUE
+                      WHERE id = $1
+                    `,
+                  });
+                  throw error;
+                }
+
+                if (property.rowCount && property.rowCount > 0) {
+                  console.info(
+                    "Newly created property ID:",
+                    property.rows[0].id,
+                  );
+
+                  try {
+                    const lastCreatedListingId = await client2.queryObject<
+                      { id: number }
+                    >(`
+                      SELECT id
+                      FROM Listing
+                      ORDER BY created_at DESC
+                      LIMIT 1
+                    `);
+                    const newListingId = lastCreatedListingId.rows[0].id +
+                      Math.floor(100000 + Math.random() * 900000);
+
+                    const newListing = await transaction.queryObject<Listing>(
+                      {
+                        args: [
+                          newListingId,
+                          rawProperty.raw_title,
+                          rawProperty.full_url,
+                          rawProperty.project_name,
+                          rawProperty.description,
+                          true, // is_scraped
+                          rawProperty.address,
+                          rawProperty.price_formatted,
+                          rawProperty.price,
+                          rawProperty.offer_type_id,
+                          property.rows[0].id,
+                        ],
+                        text: `
+                        INSERT INTO Listing (
+                          id, title, url, project_name, description, is_scraped,
+                          address, price_formatted, price, offer_type_id, property_id
+                        ) VALUES (
+                          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+                        )
+                        RETURNING id
+                      `,
+                      },
+                    );
+
+                    if (newListing.rowCount && newListing.rowCount > 0) {
+                      console.info(
+                        "Newly created listing ID:",
+                        newListing.rows[0].id,
+                      );
+                    }
+
+                    const updateResult = await transaction.queryObject({
+                      args: [rawProperty.id],
+                      text: `
+                        UPDATE lamudi_raw_data
+                        SET is_process = TRUE
+                        WHERE id = $1
+                      `,
                     });
+
+                    if (updateResult.rowCount === 1) {
+                      console.info("1 record updated in lamudi_raw_data");
+                    }
                   } catch (error) {
                     await client2.queryObject({
                       args: [rawProperty.id],
@@ -562,83 +611,6 @@ export async function listenQueue(kv: Deno.Kv) {
                     `,
                     });
                     throw error;
-                  }
-
-                  if (property.rowCount && property.rowCount > 0) {
-                    console.info(
-                      "Newly created property ID:",
-                      property.rows[0].id,
-                    );
-
-                    try {
-                      const lastCreatedListingId = await client2.queryObject<
-                        { id: number }
-                      >(`
-                      SELECT id
-                      FROM Listing
-                      ORDER BY created_at DESC
-                      LIMIT 1
-                    `);
-                      const newListingId = lastCreatedListingId.rows[0].id +
-                        Math.floor(100000 + Math.random() * 900000);
-
-                      const newListing = await transaction.queryObject<Listing>(
-                        {
-                          args: [
-                            newListingId,
-                            rawProperty.raw_title,
-                            rawProperty.full_url,
-                            rawProperty.project_name,
-                            rawProperty.description,
-                            true, // is_scraped
-                            rawProperty.address,
-                            rawProperty.price_formatted,
-                            rawProperty.price,
-                            rawProperty.offer_type_id,
-                            property.rows[0].id,
-                          ],
-                          text: `
-                        INSERT INTO Listing (
-                          id, title, url, project_name, description, is_scraped,
-                          address, price_formatted, price, offer_type_id, property_id
-                        ) VALUES (
-                          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-                        )
-                        RETURNING id
-                      `,
-                        },
-                      );
-
-                      if (newListing.rowCount && newListing.rowCount > 0) {
-                        console.info(
-                          "Newly created listing ID:",
-                          newListing.rows[0].id,
-                        );
-                      }
-
-                      const updateResult = await transaction.queryObject({
-                        args: [rawProperty.id],
-                        text: `
-                        UPDATE lamudi_raw_data
-                        SET is_process = TRUE
-                        WHERE id = $1
-                      `,
-                      });
-
-                      if (updateResult.rowCount === 1) {
-                        console.info("1 record updated in lamudi_raw_data");
-                      }
-                    } catch (error) {
-                      await client2.queryObject({
-                        args: [rawProperty.id],
-                        text: `
-                      UPDATE lamudi_raw_data
-                      SET is_process = TRUE
-                      WHERE id = $1
-                    `,
-                      });
-                      throw error;
-                    }
                   }
                 }
               }
