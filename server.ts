@@ -508,7 +508,7 @@ app.get("/api/properties/cities", async (c: Context) => {
       WHERE LOWER(ct.city) LIKE LOWER($1)
       GROUP BY ct.id, ct.city, ct.listing_city_id, rg.id, rg.region, rg.listing_region_id, pt.type_name
       ORDER BY ct.city ASC
-      LIMIT 10
+      LIMIT 5
     `,
   });
 
