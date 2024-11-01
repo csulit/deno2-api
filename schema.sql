@@ -1,6 +1,7 @@
 -- Enable PostGIS extensions for geographical data handling
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS postgis_topology;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Core lookup tables for property categorization
 CREATE TABLE Property_Type (
@@ -9,7 +10,7 @@ CREATE TABLE Property_Type (
 );
 
 CREATE TABLE Warehouse_Type (
-    warehouse_type_id SERIAL PRIMARY KEY, 
+    warehouse_type_id SERIAL PRIMARY KEY,
     type_name VARCHAR(255) NOT NULL UNIQUE
 );
 
@@ -60,28 +61,28 @@ CREATE TABLE "User" (
 CREATE TABLE Property (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES "User"(user_id),
-    
+
     -- Physical dimensions
     floor_size DOUBLE PRECISION NOT NULL DEFAULT 0,
     lot_size DOUBLE PRECISION NOT NULL DEFAULT 0,
     building_size DOUBLE PRECISION NOT NULL DEFAULT 0,
     ceiling_height DOUBLE PRECISION NOT NULL DEFAULT 0,
-    
+
     -- Property features
     no_of_bedrooms INT NOT NULL DEFAULT 0,
     no_of_bathrooms INT NOT NULL DEFAULT 0,
     no_of_parking_spaces INT NOT NULL DEFAULT 0,
-    
+
     -- Location data
     longitude FLOAT NOT NULL,
     latitude FLOAT NOT NULL,
     geog GEOGRAPHY(Point, 4326),
-    
+
     -- Property details
     year_built INT,
     primary_image_url VARCHAR(255),
     images JSONB,
-    
+
     -- Features and amenities (stored as JSON)
     amenities JSONB,
     property_features JSONB,
@@ -89,24 +90,24 @@ CREATE TABLE Property (
     outdoor_features JSONB,
     ai_generated_description JSONB,
     ai_generated_basic_features JSONB,
-    
+
     -- Classification and location references
     property_type_id INT NOT NULL REFERENCES Property_Type(property_type_id),
     warehouse_type_id INT REFERENCES Warehouse_Type(warehouse_type_id),
     listing_region_id INT NOT NULL REFERENCES Listing_Region(id) ON DELETE CASCADE,
     listing_city_id INT NOT NULL REFERENCES Listing_City(id) ON DELETE CASCADE,
     listing_area_id INT REFERENCES Listing_Area(id) ON DELETE CASCADE,
-    
+
     -- Additional metadata
     address VARCHAR(255),
     project_name VARCHAR(100),
     agent_name VARCHAR(100),
     product_owner_name VARCHAR(100),
-    
+
     -- Timestamps
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Constraints
     CONSTRAINT check_floor_size CHECK (floor_size >= 0),
     CONSTRAINT check_lot_size CHECK (lot_size >= 0),
@@ -117,8 +118,8 @@ CREATE TABLE Property (
 -- Listing information table
 CREATE TABLE Listing (
     id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL UNIQUE,
-    url VARCHAR(255) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    url VARCHAR(255) NOT NULL,
     project_name VARCHAR(100),
     description TEXT NOT NULL,
     is_scraped BOOLEAN NOT NULL DEFAULT FALSE,
@@ -160,6 +161,8 @@ CREATE INDEX idx_listing_region_id ON Property(listing_region_id);
 CREATE INDEX idx_listing_city_id ON Property(listing_city_id);
 CREATE INDEX idx_listing_area_id ON Property(listing_area_id);
 CREATE INDEX idx_listing_price ON Listing(price);
+CREATE INDEX idx_listing_title ON Listing(title);
+CREATE INDEX idx_listing_url ON Listing(url);
 CREATE INDEX idx_listing_created_at ON Listing(created_at);
 CREATE INDEX idx_property_geog ON Property USING GIST(geog);
 CREATE INDEX idx_property_amenities ON Property USING GIN (amenities);
@@ -170,7 +173,7 @@ CREATE INDEX idx_property_outdoor_features ON Property USING GIN (outdoor_featur
 CREATE INDEX idx_property_ai_generated_basic_features ON Property USING GIN (ai_generated_basic_features);
 CREATE INDEX idx_title_trgm ON Listing USING gin (title gin_trgm_ops);
 CREATE INDEX idx_description_trgm ON Listing USING gin (description gin_trgm_ops);
-CREATE INDEX idx_title_desc_tsvector ON listings USING gin (to_tsvector('english', title || ' ' || description));
+CREATE INDEX idx_title_desc_tsvector ON listing USING gin (to_tsvector('english', title || ' ' || description));
 
 -- Trigger function to auto-update timestamps
 CREATE OR REPLACE FUNCTION update_updated_at_column()

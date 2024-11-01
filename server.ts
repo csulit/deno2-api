@@ -482,8 +482,12 @@ app.get("/api/properties/cities", async (c: Context) => {
   const query = c.req.query();
   const search = query.search || "";
 
+  if (!query.property_type_id) {
+    return c.json({ error: "Property type ID is required" }, 400);
+  }
+
   const cities = await client.queryObject({
-    args: [`%${search}%`],
+    args: [`%${search}%`, query.property_type_id],
     text: `
       SELECT DISTINCT 
         ct.id,
@@ -491,10 +495,16 @@ app.get("/api/properties/cities", async (c: Context) => {
         ct.listing_city_id,
         rg.id as region_id,
         rg.region as region_name,
-        rg.listing_region_id
+        rg.listing_region_id,
+        COUNT(DISTINCT CASE 
+          WHEN $2::int IS NULL OR p.property_type_id = $2::int 
+          THEN p.id 
+        END) as property_count
       FROM Listing_City ct
-      JOIN Listing_Region rg ON ct.listing_region_id = rg.id 
+      JOIN Listing_Region rg ON ct.listing_region_id = rg.id
+      LEFT JOIN Property p ON p.listing_city_id = ct.id
       WHERE LOWER(ct.city) LIKE LOWER($1)
+      GROUP BY ct.id, ct.city, ct.listing_city_id, rg.id, rg.region, rg.listing_region_id
       ORDER BY ct.city ASC
       LIMIT 10
     `,
