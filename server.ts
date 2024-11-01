@@ -17,6 +17,7 @@ app.get("/api/properties", async (c: Context) => {
     page_size?: string;
     property_type_id?: string;
     listing_type_id?: string;
+    listing_city_id?: string; // Added listing_city_id
     search_longitude?: string;
     search_latitude?: string;
     bounding_box?: string;
@@ -101,6 +102,14 @@ app.get("/api/properties", async (c: Context) => {
     sqlParams.push(...params);
     paramCounter += params.length;
   };
+
+  // Add listing_city_id condition if provided
+  if (query.listing_city_id) {
+    addWhereCondition(
+      `p.listing_city_id = $${paramCounter}`,
+      parseInt(query.listing_city_id)
+    );
+  }
 
   // Add text search condition if search query is provided
   if (query.search) {
