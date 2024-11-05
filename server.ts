@@ -605,30 +605,31 @@ app.get("/api/properties/:userId/favorites", async (c: Context) => {
     args: [userId],
     text: `
       SELECT
-        pt.type_name AS property_type,
-        json_agg(json_build_object(
-          'formatted_price', l.price_formatted,
-          'images', p.images,
-          'title', l.title,
-          'listing_address', json_build_object(
-            'address', l.address,
-            'region', r.region,
-            'city', c.city,
-            'area', a.area
-          ),
-          'offer_type', lt.type_name
-        ) ORDER BY l.title) AS favorites
+          pt.type_name AS property_type,
+          json_agg(json_build_object(
+              'listing_id', l.id,  -- Adding listing_id
+              'formatted_price', l.price_formatted,
+              'images', p.images,
+              'title', l.title,
+              'listing_address', json_build_object(
+                  'address', l.address,
+                  'region', r.region,
+                  'city', c.city,
+                  'area', a.area
+              ),
+              'offer_type', lt.type_name
+          ) ORDER BY l.title) AS favorites
       FROM User_Favorites uf
       JOIN Property p ON uf.property_id = p.id
       JOIN Property_Type pt ON p.property_type_id = pt.property_type_id
-      JOIN Listing l ON p.id = l.property_id
+      JOIN Listing l ON p.id = l.id
       JOIN Listing_Region r ON p.listing_region_id = r.id
       JOIN Listing_City c ON p.listing_city_id = c.id
       LEFT JOIN Listing_Area a ON p.listing_area_id = a.id
       JOIN Listing_Type lt ON l.offer_type_id = lt.listing_type_id
-      WHERE uf.user_id = $1
+      WHERE uf.user_id = 1  -- Replace with the actual user ID
       GROUP BY pt.type_name
-      ORDER BY pt.type_name
+      ORDER BY pt.type_name;
     `,
   });
 
