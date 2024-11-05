@@ -133,6 +133,15 @@ CREATE TABLE Listing (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table to store user favorites
+CREATE TABLE User_Favorites (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES "User"(user_id) ON DELETE CASCADE,
+    property_id BIGINT NOT NULL REFERENCES Property(id) ON DELETE CASCADE,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, property_id)
+);
+
 -- Price history tracking
 CREATE TABLE Price_Change_Log (
    id SERIAL PRIMARY KEY,

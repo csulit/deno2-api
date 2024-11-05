@@ -526,6 +526,73 @@ app.get("/api/properties/cities", async (c: Context) => {
   });
 });
 
+app.post("/api/properties/favorites/:propertyId", async (c: Context) => {
+  using client = await dbPool.connect();
+  const propertyId = c.req.param("propertyId");
+  const { userId } = await c.req.json();
+
+  if (!propertyId || !userId) {
+    return c.json({ error: "Property ID and User ID are required" }, 400);
+  }
+
+  // First check if favorite already exists
+  const existingFavorite = await client.queryObject({
+    args: [userId, propertyId],
+    text: `
+      SELECT id, user_id, property_id, added_at 
+      FROM User_Favorites
+      WHERE user_id = $1 AND property_id = $2
+    `,
+  });
+
+  if (existingFavorite?.rowCount && existingFavorite.rowCount > 0) {
+    return c.json({
+      data: existingFavorite.rows[0],
+    });
+  }
+
+  // Create new favorite if it doesn't exist
+  const result = await client.queryObject({
+    args: [userId, propertyId],
+    text: `
+      INSERT INTO User_Favorites (user_id, property_id)
+      VALUES ($1, $2)
+      RETURNING id, user_id, property_id, added_at
+    `,
+  });
+
+  return c.json({
+    data: result.rows[0],
+  });
+});
+
+app.delete("/api/properties/favorites/:propertyId", async (c: Context) => {
+  using client = await dbPool.connect();
+  const propertyId = c.req.param("propertyId");
+  const { userId } = await c.req.json();
+
+  if (!propertyId || !userId) {
+    return c.json({ error: "Property ID and User ID are required" }, 400);
+  }
+
+  const result = await client.queryObject({
+    args: [userId, propertyId],
+    text: `
+      DELETE FROM User_Favorites
+      WHERE user_id = $1 AND property_id = $2
+      RETURNING id
+    `,
+  });
+
+  if (result.rowCount === 0) {
+    return c.json({ error: "Favorite not found" }, 404);
+  }
+
+  return c.json({
+    data: { success: true },
+  });
+});
+
 app.patch("/api/properties/:id/generate-ai-description", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
