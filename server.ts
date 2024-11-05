@@ -237,6 +237,14 @@ app.get("/api/properties", async (c: Context) => {
   const postgres = await client.queryObject({
     args: [...sqlParams, parseInt(query.page_size), offset],
     text: `
+          WITH User_Likes AS (
+              SELECT 
+                  uf.property_id
+              FROM 
+                  user_favorites uf
+              WHERE
+                  uf.user_id = 1  -- Replace with user's actual ID or parameter
+          )
           SELECT
               l.id AS listing_id,
               l.title,
@@ -292,7 +300,11 @@ app.get("/api/properties", async (c: Context) => {
                   )
                   FROM Price_Change_Log pcl
                   WHERE pcl.listing_id = l.id
-              ) AS price_change_log
+              ) AS price_change_log,
+              CASE
+                  WHEN ull.property_id IS NOT NULL THEN TRUE
+                  ELSE FALSE
+              END AS is_liked
           FROM
               Listing l
               JOIN Property p ON l.property_id = p.id
@@ -302,6 +314,7 @@ app.get("/api/properties", async (c: Context) => {
               LEFT JOIN Listing_Region rg ON p.listing_region_id = rg.id
               LEFT JOIN Listing_City ct ON p.listing_city_id = ct.id
               LEFT JOIN Listing_Area ar ON p.listing_area_id = ar.id
+              LEFT JOIN User_Likes ull ON p.id = ull.property_id
           WHERE
               ${sqlWhereClause}
           ${orderByClause} LIMIT $${paramCounter} OFFSET $${paramCounter + 1};
