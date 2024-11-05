@@ -593,6 +593,50 @@ app.delete("/api/properties/favorites/:propertyId", async (c: Context) => {
   });
 });
 
+app.get("/api/properties/:userId/favorites", async (c: Context) => {
+  using client = await dbPool.connect();
+  const userId = c.req.param("userId");
+
+  if (!userId) {
+    return c.json({ error: "User ID is required" }, 400);
+  }
+
+  const favorites = await client.queryObject({
+    args: [userId],
+    text: `
+      SELECT
+        pt.type_name AS property_type,
+        json_agg(json_build_object(
+          'formatted_price', l.price_formatted,
+          'images', p.images,
+          'title', l.title,
+          'listing_address', json_build_object(
+            'address', l.address,
+            'region', r.region,
+            'city', c.city,
+            'area', a.area
+          ),
+          'offer_type', lt.type_name
+        ) ORDER BY l.title) AS favorites
+      FROM User_Favorites uf
+      JOIN Property p ON uf.property_id = p.id
+      JOIN Property_Type pt ON p.property_type_id = pt.property_type_id
+      JOIN Listing l ON p.id = l.property_id
+      JOIN Listing_Region r ON p.listing_region_id = r.id
+      JOIN Listing_City c ON p.listing_city_id = c.id
+      LEFT JOIN Listing_Area a ON p.listing_area_id = a.id
+      JOIN Listing_Type lt ON l.offer_type_id = lt.listing_type_id
+      WHERE uf.user_id = $1
+      GROUP BY pt.type_name
+      ORDER BY pt.type_name
+    `,
+  });
+
+  return c.json({
+    data: favorites.rows,
+  });
+});
+
 app.patch("/api/properties/:id/generate-ai-description", async (c: Context) => {
   using client = await dbPool.connect();
   const id = c.req.param("id");
